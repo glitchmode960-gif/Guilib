@@ -1,6 +1,6 @@
 --!nonstrict
 -- GuilibMobile v6.0 — Delta Style
--- Чистый минимализм: тёмное окно, сайдбар-табы, крупные кнопки
+-- Минималистичный GUI: сайдбар слева, крупные кнопки, тёмный фон
 
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
@@ -17,7 +17,6 @@ local Tab = {}; Tab.__index = Tab
 Library.Version = "6.0"
 Library.Brand = "GuiLib"
 
--- Единая тёмная тема (как Delta)
 local Theme = {
 	Background = Color3.fromRGB(22, 22, 26),
 	Topbar = Color3.fromRGB(28, 28, 34),
@@ -87,7 +86,6 @@ local function clickArea(row, h)
 	return b
 end
 
--- CODEC для config
 local function encodeV(v)
 	if typeof(v) == "Color3" then return { __t = "Color3", r = v.R, g = v.G, b = v.B } end
 	if typeof(v) == "EnumItem" then return { __t = "Enum", name = v.Name } end
@@ -104,7 +102,7 @@ local function decodeV(v)
 end
 
 -- ============================================================
--- WINDOW — как Delta
+-- WINDOW
 -- ============================================================
 function Library:CreateWindow(opts)
 	if type(opts) == "string" then opts = { Title = opts } end
@@ -127,7 +125,6 @@ function Library:CreateWindow(opts)
 	})
 	mountGui(self.Gui)
 
-	-- Main окно
 	self.Main = create("CanvasGroup", {
 		Size = UDim2.fromOffset(self._size.X, self._size.Y),
 		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
@@ -135,7 +132,6 @@ function Library:CreateWindow(opts)
 	}, { corner(18) })
 	self.Scale = create("UIScale", { Parent = self.Main })
 
-	-- Верхняя панель
 	local header = create("Frame", {
 		Size = UDim2.new(1, 0, 0, 56), BackgroundColor3 = Theme.Topbar,
 		BorderSizePixel = 0, Parent = self.Main,
@@ -145,7 +141,6 @@ function Library:CreateWindow(opts)
 		BackgroundColor3 = Theme.Topbar, BorderSizePixel = 0, Parent = header,
 	})
 
-	-- Заголовок + подпись (как на скрине)
 	local tLbl = label(header, title, UDim2.new(1, -120, 0, 24), UDim2.fromOffset(20, opts.Subtitle and 8 or 16), 17)
 	tLbl.Font = Enum.Font.GothamBold
 	if opts.Subtitle then
@@ -153,7 +148,6 @@ function Library:CreateWindow(opts)
 		s.TextColor3 = Theme.SubText
 	end
 
-	-- Кнопки минимизации/закрытия — квадратики без обводки
 	local function hBtn(t, x, cb)
 		local b = create("TextButton", {
 			Size = UDim2.fromOffset(36, 36), Position = UDim2.new(1, x, 0.5, -18),
@@ -168,13 +162,11 @@ function Library:CreateWindow(opts)
 	hBtn("−", -100, function() self:SetMinimized(not self.Minimized) end)
 	hBtn("✕", -54, function() self:Destroy() end)
 
-	-- Body с сайдбаром (как в Delta)
 	self.Body = create("Frame", {
 		Size = UDim2.new(1, 0, 1, -56), Position = UDim2.fromOffset(0, 56),
 		BackgroundTransparency = 1, Parent = self.Main,
 	})
 
-	-- Sidebar слева
 	self.Sidebar = create("Frame", {
 		Size = UDim2.new(0, 160, 1, 0), BackgroundColor3 = Theme.Topbar,
 		BorderSizePixel = 0, Parent = self.Body,
@@ -188,13 +180,11 @@ function Library:CreateWindow(opts)
 	create("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder, Parent = sb })
 	self._sbList = sb
 
-	-- Content справа
 	self.Pages = create("Frame", {
 		Size = UDim2.new(1, -160, 1, 0), Position = UDim2.fromOffset(160, 0),
 		BackgroundTransparency = 1, Parent = self.Body,
 	})
 
-	-- Notifications
 	self.Notes = create("Frame", {
 		Size = UDim2.fromOffset(math.min(340, cam.ViewportSize.X * 0.9), 400),
 		AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 60),
@@ -203,7 +193,6 @@ function Library:CreateWindow(opts)
 	create("UIListLayout", { Padding = UDim.new(0, 10),
 		HorizontalAlignment = Enum.HorizontalAlignment.Center, Parent = self.Notes })
 
-	-- FAB
 	self.Fab = create("TextButton", {
 		Size = UDim2.fromOffset(56, 56), Position = UDim2.new(0, 16, 0.45, 0),
 		BackgroundColor3 = Theme.Topbar, Text = title:sub(1, 1):upper(),
@@ -282,7 +271,6 @@ function Window:SelectTab(tab)
 end
 
 function Window:CreateTab(name)
-	-- Кнопка-таб в сайдбаре (как Delta)
 	local button = create("TextButton", {
 		Size = UDim2.new(1, 0, 0, 40), BackgroundColor3 = Theme.Topbar,
 		BorderSizePixel = 0, Text = name, TextColor3 = Theme.SubText,
@@ -309,7 +297,7 @@ function Window:CreateTab(name)
 end
 
 -- ============================================================
--- NOTIFY — как в Delta: тёмная карточка с заголовком и описанием
+-- NOTIFY — как в Delta: тёмная карточка
 -- ============================================================
 function Window:Notify(o)
 	if type(o) ~= "table" then o = { Text = tostring(o) } end
@@ -322,14 +310,11 @@ function Window:Notify(o)
 		BorderSizePixel = 0, GroupTransparency = 1, Parent = self.Notes,
 	}, { corner(14) })
 
-	-- Заголовок
-	local t = label(note, o.Title or "Notification", UDim2.new(1, -80, 0, 24), UDim2.fromOffset(18, 14), 16)
+	local t = label(note, o.Title or "Notification", UDim2.new(1, -36, 0, 24), UDim2.fromOffset(18, 14), 16)
 	t.Font = Enum.Font.GothamBold
-	-- Описание
-	local d = label(note, o.Text or "", UDim2.new(1, -80, 0, 44), UDim2.fromOffset(18, 40), 13)
+	local d = label(note, o.Text or "", UDim2.new(1, -36, 0, 44), UDim2.fromOffset(18, 40), 13)
 	d.TextColor3 = Theme.SubText; d.TextWrapped = true; d.TextYAlignment = Enum.TextYAlignment.Top
 
-	-- Тонкая полоса-таймер сверху, едва видна
 	local bar = create("Frame", { Size = UDim2.new(1, 0, 0, 2), Position = UDim2.new(0, 0, 0, 0),
 		BackgroundColor3 = color, BackgroundTransparency = 0.6, BorderSizePixel = 0, Parent = note }, { corner(2) })
 	tween(bar, dur, { Size = UDim2.new(0, 0, 0, 2), BackgroundTransparency = 1 }, Enum.EasingStyle.Linear)
@@ -339,17 +324,43 @@ function Window:Notify(o)
 		if note.Parent then tween(note, 0.22, { GroupTransparency = 1 }); task.wait(0.25); note:Destroy() end
 	end)
 end
+
+function Window:NotifyWithButton(cfg)
+	cfg = cfg or {}
+	local kind = cfg.Type or "info"
+	local color = Theme[kind:sub(1,1):upper() .. kind:sub(2)] or Theme.Info
+	local note = create("CanvasGroup", {
+		Size = UDim2.new(1, 0, 0, 108), BackgroundColor3 = Theme.Topbar,
+		BorderSizePixel = 0, GroupTransparency = 1, Parent = self.Notes,
+	}, { corner(14) })
+	local t = label(note, cfg.Title or "Notification", UDim2.new(1, -130, 0, 24), UDim2.fromOffset(18, 14), 16)
+	t.Font = Enum.Font.GothamBold
+	local d = label(note, cfg.Text or "", UDim2.new(1, -130, 0, 56), UDim2.fromOffset(18, 40), 13)
+	d.TextColor3 = Theme.SubText; d.TextWrapped = true; d.TextYAlignment = Enum.TextYAlignment.Top
+	local btn = create("TextButton", {
+		Size = UDim2.fromOffset(90, 38), Position = UDim2.new(1, -108, 0.5, -19),
+		BackgroundColor3 = Theme.Accent, BorderSizePixel = 0, Text = cfg.ButtonText or "OK",
+		TextColor3 = Color3.new(1, 1, 1), Font = Enum.Font.GothamBold, TextSize = 13,
+		AutoButtonColor = false, Parent = note,
+	}, { corner(10) })
+	btn.MouseButton1Click:Connect(function()
+		safe(cfg.ButtonCallback)
+		tween(note, 0.2, { GroupTransparency = 1 }); task.delay(0.25, function() note:Destroy() end)
+	end)
+	tween(note, 0.28, { GroupTransparency = 0 }, Enum.EasingStyle.Quint)
+	task.delay(cfg.Duration or 8, function()
+		if note.Parent then tween(note, 0.22, { GroupTransparency = 1 }); task.wait(0.25); note:Destroy() end
+	end)
+end
+
 -- ============================================================
 -- ЭЛЕМЕНТЫ
 -- ============================================================
-
--- Секция (просто заголовок, как «Network» / «Check out this script!»)
 function Tab:AddSection(text)
 	local l = label(self.Page, text or "Section", UDim2.new(1, 0, 0, 26), UDim2.fromOffset(4, 4), 15)
 	l.Font = Enum.Font.GothamBold; l.TextColor3 = Theme.Text
 end
 
--- Крупная info-карточка (как «Network» с подписью)
 function Tab:AddSectionInfo(title, subtitle)
 	local wrap = create("Frame", {
 		Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
@@ -375,7 +386,6 @@ function Tab:AddLabel(text)
 	return { Set = function(_, v) l.Text = v end }
 end
 
--- Кнопка — крупная, по центру текста (как «Execute» в Delta)
 function Tab:AddButton(o)
 	local row = newRow(self.Page)
 	local l = label(row, o.Name or "Button", UDim2.new(1, -32, 1, 0), UDim2.fromOffset(16, 0), 15)
@@ -385,7 +395,6 @@ function Tab:AddButton(o)
 	return row
 end
 
--- Toggle — «пилюля» сбоку
 function Tab:AddToggle(o)
 	local win = self.Window
 	local state = o.Default or false
@@ -412,7 +421,6 @@ function Tab:AddToggle(o)
 	return obj
 end
 
--- Slider
 function Tab:AddSlider(o)
 	local win, page = self.Window, self.Page
 	local min, max, inc = o.Min or 0, o.Max or 100, o.Increment or 1
@@ -453,7 +461,6 @@ function Tab:AddSlider(o)
 	return obj
 end
 
--- Textbox
 function Tab:AddTextbox(o)
 	local win = self.Window
 	local row = newRow(self.Page, 64)
@@ -478,7 +485,6 @@ function Tab:AddTextbox(o)
 	return obj
 end
 
--- Dropdown
 function Tab:AddDropdown(o)
 	local win = self.Window
 	local options = o.Options or {}
@@ -525,7 +531,6 @@ function Tab:AddDropdown(o)
 	return obj
 end
 
--- Keybind
 function Tab:AddKeybind(o)
 	local win = self.Window
 	local key = o.Default or Enum.KeyCode.RightShift
@@ -560,7 +565,6 @@ function Tab:AddKeybind(o)
 	return obj
 end
 
--- ColorPicker
 function Tab:AddColorPicker(o)
 	local win = self.Window
 	local color = o.Default or Theme.Accent
@@ -586,7 +590,7 @@ function Tab:AddColorPicker(o)
 	bg.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 0) })
 	local marker = create("Frame", { Size = UDim2.fromOffset(16, 16), AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.new(s, 0, 1 - v, 0), BackgroundTransparency = 1, Parent = sv }, { round() })
-	local mS = create("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 2, Parent = marker })
+	create("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 2, Parent = marker })
 	local hue = create("Frame", { Size = UDim2.new(1, -32, 0, 16), Position = UDim2.fromOffset(16, 126),
 		BackgroundColor3 = Color3.fromRGB(255, 0, 0), BorderSizePixel = 0, Parent = holder }, { round() })
 	local hg = create("UIGradient", { Parent = hue })
@@ -602,7 +606,7 @@ function Tab:AddColorPicker(o)
 	local hM = create("Frame", { Size = UDim2.fromOffset(20, 20), AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.new(h, 0, 0.5, 0), BackgroundColor3 = Color3.new(1, 1, 1),
 		BorderSizePixel = 0, Parent = hue }, { round() })
-	local hMS = create("UIStroke", { Color = Color3.new(0, 0, 0), Transparency = 0.5, Thickness = 2, Parent = hM })
+	create("UIStroke", { Color = Color3.new(0, 0, 0), Transparency = 0.5, Thickness = 2, Parent = hM })
 	local function apply(silent)
 		color = Color3.fromHSV(h, s, v)
 		preview.BackgroundColor3 = color
@@ -637,7 +641,6 @@ function Tab:AddColorPicker(o)
 	return obj
 end
 
--- ProgressBar
 function Tab:AddProgressBar(o)
 	local min, max = o.Min or 0, o.Max or 100
 	local value = o.Default or min
@@ -661,7 +664,6 @@ function Tab:AddProgressBar(o)
 	set(value); return obj
 end
 
--- Stepper
 function Tab:AddStepper(o)
 	local win = self.Window
 	local min, max = o.Min or 0, o.Max or 10
@@ -691,7 +693,6 @@ function Tab:AddStepper(o)
 	win:_register(o.Flag, obj, value); return obj
 end
 
--- RadioGroup
 function Tab:AddRadioGroup(o)
 	local win = self.Window
 	local options = o.Options or {}
@@ -729,7 +730,6 @@ function Tab:AddRadioGroup(o)
 	set(current, true); win:_register(o.Flag, obj, current); return obj
 end
 
--- MultiDropdown
 function Tab:AddMultiDropdown(o)
 	local win = self.Window
 	local options = o.Options or {}
@@ -783,14 +783,12 @@ function Tab:AddMultiDropdown(o)
 	update(); win:_register(o.Flag, obj, getList()); return obj
 end
 
--- Divider
 function Tab:AddDivider()
 	local wrap = create("Frame", { Size = UDim2.new(1, 0, 0, 12), BackgroundTransparency = 1, Parent = self.Page })
 	create("Frame", { Size = UDim2.new(1, 0, 0, 1), Position = UDim2.new(0, 0, 0.5, 0),
 		BackgroundColor3 = Theme.Hover, BorderSizePixel = 0, Parent = wrap })
 end
 
--- Loader
 function Tab:AddLoader(o)
 	local row = newRow(self.Page)
 	local ring = create("Frame", { Size = UDim2.fromOffset(28, 28), Position = UDim2.fromOffset(16, 12),
@@ -806,7 +804,6 @@ function Tab:AddLoader(o)
 	return { Stop = function() spinning = false end }
 end
 
--- Paragraph
 function Tab:AddParagraph(o)
 	local row = create("Frame", { Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
 		BackgroundColor3 = Theme.Element, BorderSizePixel = 0, Parent = self.Page },
@@ -819,6 +816,7 @@ function Tab:AddParagraph(o)
 	c.AutomaticSize = Enum.AutomaticSize.Y; c.TextWrapped = true; c.TextColor3 = Theme.SubText
 	c.TextTruncate = Enum.TextTruncate.None
 end
+
 -- ============================================================
 -- CONFIG
 -- ============================================================
@@ -872,7 +870,6 @@ function Library:SetTheme(name)
 	local t = THEMES[name]; if not t then return end
 	local oldAccent = Theme.Accent
 	Theme.Accent = t.Accent
-	-- Меняем accent во всех окнах
 	for _, gui in ipairs(CoreGui:GetChildren()) do
 		if gui.Name:sub(1, 7) == "GuiLib_" then
 			for _, obj in ipairs(gui:GetDescendants()) do
@@ -913,7 +910,7 @@ function Library:CloseAll()
 end
 
 -- ============================================================
--- CLICK FX + TOAST
+-- CLICK FX + TOAST + WATERMARK
 -- ============================================================
 function Window:SetClickFx(cfg)
 	cfg = cfg or {}
@@ -948,9 +945,6 @@ function Window:Toast(text, duration)
 	end)
 end
 
--- ============================================================
--- WATERMARK
--- ============================================================
 function Library:SetWatermark(win, visible)
 	if win._wm and win._wm.Parent then win._wm:Destroy(); win._wm = nil end
 	if not visible then return end
@@ -964,9 +958,6 @@ function Library:SetWatermark(win, visible)
 	win._wm = wm
 end
 
--- ============================================================
--- CONFIG TAB
--- ============================================================
 function Window:AddConfigTab(tab)
 	tab:AddSection("Конфиг")
 	tab:AddTextbox({ Name = "Имя конфига", Default = self.ConfigName or "default",
@@ -989,7 +980,7 @@ end
 function Library:AddAutoTabs(win)
 	-- Темы
 	local tabT = win:CreateTab("Темы")
-	tabT:AddSectionInfo("Персонализация", "Выбери цвет акцента интерфейса")
+	tabT:AddSectionInfo("Персонализация", "Выбери цвет акцента")
 	tabT:AddDropdown({
 		Name = "Акцент", Options = Library:GetThemes(), Default = "Delta",
 		Callback = function(n)
@@ -1053,7 +1044,7 @@ function Library:AddAutoTabs(win)
 	local tabA = win:CreateTab("Инфо")
 	tabA:AddSectionInfo("GuiLib", "v" .. Library.Version)
 	tabA:AddParagraph({ Title = "О библиотеке",
-		Content = "Минималистичная GUI-библиотека для Roblox executor.\nЗаточена под телефон и ПК." })
+		Content = "Минималистичная GUI-библиотека.\nЗаточена под телефон и ПК.\nСтиль: Delta Executor." })
 	tabA:AddSectionInfo("Настройки", "Дополнительно")
 	tabA:AddToggle({ Name = "Watermark", Default = false,
 		Callback = function(v) Library:SetWatermark(win, v) end })
