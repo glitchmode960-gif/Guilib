@@ -1,9 +1,7 @@
 --!nonstrict
--- GuiLibMobile: GUI-библиотека для Roblox, заточенная под телефон
--- + адаптивный размер под экран, крупные элементы под палец
--- + плавающая кнопка, темы, ClickFX, Toast
---
--- local Library = loadstring(game:HttpGet("ТВОЯ_ССЫЛКА"))()
+-- GuiLibMobile v3.0 — TOP ×99999
+-- GUI-библиотека для Roblox, заточенная под телефон + ПК
+-- 20+ методов, 12 тем, ClickFx, Toast, Config, Animations
 
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
@@ -30,6 +28,8 @@ local Theme = {
 	Stroke = Color3.fromRGB(70, 70, 95),
 }
 Library.Theme = Theme
+Library.Version = "3.0"
+Library.Brand = "GuiLibMobile"
 
 local TypeColors = {
 	info = Color3.fromRGB(90, 150, 255),
@@ -40,9 +40,6 @@ local TypeColors = {
 
 local ROW = 46
 
-----------------------------------------------------------------
--- Хелперы
-----------------------------------------------------------------
 local function create(class, props, children)
 	local inst = Instance.new(class)
 	local parent
@@ -178,7 +175,7 @@ local function clickArea(row, height)
 end
 
 ----------------------------------------------------------------
--- Окно
+-- WINDOW
 ----------------------------------------------------------------
 function Library:CreateWindow(opts)
 	if type(opts) == "string" then opts = { Title = opts } end
@@ -226,7 +223,7 @@ function Library:CreateWindow(opts)
 		BorderSizePixel = 0,
 		Parent = self.Main,
 	})
-	local line = create("Frame", {
+	create("Frame", {
 		Size = UDim2.new(1, 0, 0, 2),
 		Position = UDim2.new(0, 0, 1, -2),
 		BackgroundColor3 = Color3.new(1, 1, 1),
@@ -494,8 +491,57 @@ function Window:Notify(o)
 	end)
 end
 
+function Window:NotifyWithButton(cfg)
+	cfg = cfg or {}
+	local color = TypeColors[cfg.Type or "info"]
+	local note = create("CanvasGroup", {
+		Size = UDim2.new(1, 0, 0, 80),
+		BackgroundColor3 = Theme.Topbar,
+		BorderSizePixel = 0,
+		GroupTransparency = 1,
+		Parent = self.Notes,
+	}, { corner(12), stroke(color, 0.5, 1) })
+	create("Frame", {
+		Size = UDim2.new(0, 4, 1, 0), BackgroundColor3 = color, BorderSizePixel = 0, Parent = note,
+	})
+	local t = label(note, cfg.Title or "", UDim2.new(1, -28, 0, 22), UDim2.fromOffset(16, 6), 15)
+	t.Font = Enum.Font.GothamBold
+	local d = label(note, cfg.Text or "", UDim2.new(1, -100, 0, 40), UDim2.fromOffset(16, 28), 12)
+	d.TextColor3 = Theme.SubText
+	d.TextWrapped = true
+
+	if cfg.ButtonText then
+		local btn = create("TextButton", {
+			Size = UDim2.fromOffset(70, 28),
+			Position = UDim2.new(1, -80, 0.5, -14),
+			BackgroundColor3 = Theme.Accent,
+			BorderSizePixel = 0,
+			Text = cfg.ButtonText,
+			TextColor3 = Color3.new(1, 1, 1),
+			Font = Enum.Font.GothamBold,
+			TextSize = 12,
+			AutoButtonColor = false,
+			Parent = note,
+		}, { corner(8) })
+		btn.MouseButton1Click:Connect(function()
+			safe(cfg.ButtonCallback)
+			tween(note, 0.2, { GroupTransparency = 1 })
+			task.delay(0.25, function() note:Destroy() end)
+		end)
+	end
+
+	tween(note, 0.3, { GroupTransparency = 0 }, Enum.EasingStyle.Back)
+	task.delay(cfg.Duration or 6, function()
+		if note.Parent then
+			tween(note, 0.25, { GroupTransparency = 1 })
+			task.wait(0.3)
+			note:Destroy()
+		end
+	end)
+end
+
 ----------------------------------------------------------------
--- Флаги и конфиги
+-- Флаги, конфиги
 ----------------------------------------------------------------
 function Window:_register(flag, obj, value)
 	if not flag then return end
@@ -505,10 +551,9 @@ end
 
 function Window:SaveConfig(name)
 	if typeof(writefile) ~= "function" then return false end
-	local ok = pcall(function()
+	return pcall(function()
 		writefile("GuiLib_" .. (name or self.ConfigName) .. ".json", HttpService:JSONEncode(self.Flags))
 	end)
-	return ok
 end
 
 function Window:LoadConfig(name)
@@ -523,11 +568,28 @@ function Window:LoadConfig(name)
 	return true
 end
 
+function Window:EnableAutoSave()
+	self._autoSave = true
+end
+
 ----------------------------------------------------------------
--- Базовые элементы
+-- БАЗОВЫЕ ЭЛЕМЕНТЫ
 ----------------------------------------------------------------
 function Tab:AddSection(text)
 	local l = label(self.Page, string.upper(text or ""), UDim2.new(1, 0, 0, 24), nil, 12)
+	l.Font = Enum.Font.GothamBold
+	l.TextColor3 = Theme.Accent2
+end
+
+function Tab:AddSectionIcon(icon, text)
+	local row = create("Frame", {
+		Size = UDim2.new(1, 0, 0, 28),
+		BackgroundTransparency = 1,
+		Parent = self.Page,
+	})
+	local ic = label(row, icon or "•", UDim2.fromOffset(24, 28), UDim2.fromOffset(0, 0), 14)
+	ic.TextColor3 = Theme.Accent
+	local l = label(row, string.upper(text or ""), UDim2.new(1, -30, 1, 0), UDim2.fromOffset(24, 0), 12)
 	l.Font = Enum.Font.GothamBold
 	l.TextColor3 = Theme.Accent2
 end
@@ -826,9 +888,7 @@ function Tab:AddKeybind(o)
 	}, { corner(8), stroke(Theme.Stroke, 0.5) })
 
 	local obj = {}
-	local function setLabel()
-		badge.Text = listening and "..." or key.Name
-	end
+	local function setLabel() badge.Text = listening and "..." or key.Name end
 
 	badge.MouseButton1Click:Connect(function()
 		if listening then return end
@@ -838,10 +898,7 @@ function Tab:AddKeybind(o)
 		conn = UIS.InputBegan:Connect(function(input)
 			if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
 			if input.KeyCode == Enum.KeyCode.Escape then
-				listening = false
-				setLabel()
-				conn:Disconnect()
-				return
+				listening = false; setLabel(); conn:Disconnect(); return
 			end
 			key = input.KeyCode
 			listening = false
@@ -854,16 +911,11 @@ function Tab:AddKeybind(o)
 
 	win:_connect(UIS.InputBegan, function(input, processed)
 		if processed then return end
-		if input.KeyCode == key and o.Callback then
-			safe(o.Callback, key)
-		end
+		if input.KeyCode == key and o.Callback then safe(o.Callback, key) end
 	end)
 
 	function obj:Get() return key end
-	function obj:Set(v)
-		key = typeof(v) == "string" and (Enum.KeyCode[v] or key) or v
-		setLabel()
-	end
+	function obj:Set(v) key = typeof(v) == "string" and (Enum.KeyCode[v] or key) or v; setLabel() end
 	if o.Flag then win.Flags[o.Flag] = key.Name end
 	return obj
 end
@@ -901,7 +953,6 @@ function Tab:AddColorPicker(o)
 		BorderSizePixel = 0,
 		Parent = holder,
 	}, { corner(8) })
-
 	local white = create("Frame", {
 		Size = UDim2.fromScale(1, 1),
 		BackgroundColor3 = Color3.new(1, 1, 1),
@@ -914,7 +965,6 @@ function Tab:AddColorPicker(o)
 		NumberSequenceKeypoint.new(0, 0),
 		NumberSequenceKeypoint.new(1, 1),
 	})
-
 	local black = create("Frame", {
 		Size = UDim2.fromScale(1, 1),
 		BackgroundColor3 = Color3.new(0, 0, 0),
@@ -926,7 +976,6 @@ function Tab:AddColorPicker(o)
 		NumberSequenceKeypoint.new(0, 1),
 		NumberSequenceKeypoint.new(1, 0),
 	})
-
 	local marker = create("Frame", {
 		Size = UDim2.fromOffset(14, 14),
 		AnchorPoint = Vector2.new(0.5, 0.5),
@@ -985,12 +1034,8 @@ function Tab:AddColorPicker(o)
 		apply()
 	end
 
-	sv.InputBegan:Connect(function(input)
-		if isPointer(input) then dragSV = true; handleSV(input) end
-	end)
-	hue.InputBegan:Connect(function(input)
-		if isPointer(input) then dragH = true; handleH(input) end
-	end)
+	sv.InputBegan:Connect(function(input) if isPointer(input) then dragSV = true; handleSV(input) end end)
+	hue.InputBegan:Connect(function(input) if isPointer(input) then dragH = true; handleH(input) end end)
 	win:_connect(UIS.InputChanged, function(input)
 		if not isMove(input) then return end
 		if dragSV then handleSV(input) end
@@ -1008,10 +1053,7 @@ function Tab:AddColorPicker(o)
 
 	local obj = {}
 	function obj:Get() return color end
-	function obj:Set(c)
-		h, s, v = Color3.toHSV(c)
-		apply(true)
-	end
+	function obj:Set(c) h, s, v = Color3.toHSV(c); apply(true) end
 	apply(true)
 	return obj
 end
@@ -1044,6 +1086,42 @@ function Tab:AddProgressBar(o)
 		value = math.clamp(v, min, max)
 		local a = (max - min > 0) and (value - min) / (max - min) or 0
 		fill.Size = UDim2.fromScale(a, 1)
+		valLabel.Text = math.floor(a * 100) .. (o.Suffix or "%")
+	end
+	function obj:Set(v) set(v) end
+	function obj:Get() return value end
+	set(value)
+	return obj
+end
+
+function Tab:AddAnimatedProgress(o)
+	local min, max = o.Min or 0, o.Max or 100
+	local value = o.Default or min
+	local row = newRow(self.Page, 60)
+	label(row, o.Name, UDim2.new(1, -90, 0, 26), UDim2.fromOffset(14, 6))
+	local valLabel = label(row, "", UDim2.new(0, 70, 0, 26), UDim2.new(1, -84, 0, 6))
+	valLabel.TextXAlignment = Enum.TextXAlignment.Right
+	valLabel.TextColor3 = Theme.SubText
+
+	local bar = create("Frame", {
+		Size = UDim2.new(1, -28, 0, 10),
+		Position = UDim2.fromOffset(14, 38),
+		BackgroundColor3 = Theme.Hover,
+		BorderSizePixel = 0,
+		Parent = row,
+	}, { round() })
+	local fill = create("Frame", {
+		Size = UDim2.fromScale(0, 1),
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		BorderSizePixel = 0,
+		Parent = bar,
+	}, { round(), gradient(0) })
+
+	local obj = {}
+	local function set(v)
+		value = math.clamp(v, min, max)
+		local a = (max - min > 0) and (value - min) / (max - min) or 0
+		tween(fill, 0.35, { Size = UDim2.fromScale(a, 1) }, Enum.EasingStyle.Quint)
 		valLabel.Text = math.floor(a * 100) .. (o.Suffix or "%")
 	end
 	function obj:Set(v) set(v) end
@@ -1139,11 +1217,7 @@ function Tab:AddRadioGroup(o)
 		BackgroundTransparency = 1,
 		Parent = wrap,
 	})
-	create("UIListLayout", {
-		FillDirection = Enum.FillDirection.Horizontal,
-		Padding = UDim.new(0, 8),
-		Parent = holder,
-	})
+	create("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), Parent = holder })
 
 	local btns = {}
 	local function update()
@@ -1203,11 +1277,7 @@ function Tab:AddMultiDropdown(o)
 		ClipsDescendants = true,
 		Parent = row,
 	})
-	create("UIListLayout", {
-		Padding = UDim.new(0, 4),
-		HorizontalAlignment = Enum.HorizontalAlignment.Center,
-		Parent = holder,
-	})
+	create("UIListLayout", { Padding = UDim.new(0, 4), HorizontalAlignment = Enum.HorizontalAlignment.Center, Parent = holder })
 
 	local btns = {}
 	local function getList()
@@ -1219,9 +1289,7 @@ function Tab:AddMultiDropdown(o)
 	end
 	local function update()
 		for _, d in pairs(btns) do
-			tween(d.Btn, 0.15, {
-				BackgroundColor3 = selected[d.Name] and Theme.Accent or Theme.Hover
-			})
+			tween(d.Btn, 0.15, { BackgroundColor3 = selected[d.Name] and Theme.Accent or Theme.Hover })
 		end
 		valLabel.Text = #getList() .. " выбрано"
 	end
@@ -1372,8 +1440,14 @@ function Library:GetThemes()
 	return list
 end
 
+function Library:CloseAll()
+	for _, gui in ipairs(CoreGui:GetChildren()) do
+		if gui.Name:sub(1, 7) == "GuiLib_" then gui:Destroy() end
+	end
+end
+
 ----------------------------------------------------------------
--- ClickFX и Toast
+-- ClickFX, Toast, утилиты окна
 ----------------------------------------------------------------
 function Window:SetClickFx(cfg)
 	cfg = cfg or {}
@@ -1408,10 +1482,7 @@ function Window:SetClickFx(cfg)
 			c.BackgroundColor3 = color
 			c.BackgroundTransparency = 0.6
 		end
-		tween(c, dur, {
-			Size = UDim2.fromOffset(size, size),
-			BackgroundTransparency = 1,
-		})
+		tween(c, dur, { Size = UDim2.fromOffset(size, size), BackgroundTransparency = 1 })
 		task.delay(dur + 0.05, function() c:Destroy() end)
 	end)
 end
@@ -1436,6 +1507,74 @@ function Window:Toast(text, duration)
 		task.wait(0.3)
 		t:Destroy()
 	end)
+end
+
+function Window:SetFabIcon(text)
+	self.Fab.Text = text
+end
+
+function Window:BindToggleKey(key)
+	key = key or Enum.KeyCode.RightShift
+	self:_connect(UIS.InputBegan, function(input, gp)
+		if gp then return end
+		if input.KeyCode == key then self:SetOpen(not self.Open) end
+	end)
+end
+
+function Window:AddConfigTab(tab)
+	tab:AddSection("Конфиги")
+	tab:AddTextbox({
+		Name = "Имя конфига",
+		Default = self.ConfigName or "default",
+		Placeholder = "my_config",
+		Callback = function(name) self.ConfigName = name end,
+	})
+	tab:AddButton({
+		Name = "💾 Сохранить",
+		Callback = function()
+			local ok = self:SaveConfig()
+			self:Notify({
+				Title = ok and "Сохранено" or "Ошибка",
+				Text = ok and "Конфиг записан" or "writefile недоступен",
+				Type = ok and "success" or "error",
+			})
+		end,
+	})
+	tab:AddButton({
+		Name = "📂 Загрузить",
+		Callback = function()
+			local ok = self:LoadConfig()
+			self:Notify({
+				Title = ok and "Загружено" or "Ошибка",
+				Text = ok and "Конфиг применён" or "Файл не найден",
+				Type = ok and "success" or "error",
+			})
+		end,
+	})
+end
+
+function Tab:AddThemeSelector()
+	local win = self.Window
+	self:AddSection("Тема")
+	self:AddDropdown({
+		Name = "Выбери тему",
+		Options = Library:GetThemes(),
+		Default = "Purple",
+		Callback = function(name)
+			Library:SetTheme(name)
+			win:Notify({ Title = "Тема", Text = name, Type = "info", Duration = 2 })
+		end,
+	})
+end
+
+function Tab:AddReloadButton(url)
+	self:AddSection("Утилиты")
+	self:AddButton({
+		Name = "🔄 Перезапустить",
+		Callback = function()
+			if url then loadstring(game:HttpGet(url))() end
+		end,
+	})
 end
 
 return Library
