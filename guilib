@@ -1,7 +1,7 @@
 --!nonstrict
--- GuilibMobile v5.0 — TOP ×99999
--- Фишки: полный перекрас тем, встроенные вкладки Темы/Игрок/О библиотеке,
--- Watermark, PlayerList, Config, ClickFX, Toast, 20+ методов
+-- GuilibMobile v6.0 — Delta Style
+-- Минималистичный GUI в стиле Delta Executor
+-- Крупные кнопки, скруглённые формы, тёмная тема
 
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
@@ -16,109 +16,137 @@ local Library = {}
 local Window = {}; Window.__index = Window
 local Tab = {}; Tab.__index = Tab
 
-Library.Version = "5.0"
+Library.Version = "6.0"
 Library.Brand = "GuiLibMobile"
 
 -- ============================================================
--- ПОЛНЫЕ ТЕМЫ (все цвета)
+-- ТЕМЫ (полные — все цвета)
 -- ============================================================
 local THEMES = {
-	Purple = {
-		Background = Color3.fromRGB(18, 18, 24), Topbar = Color3.fromRGB(26, 26, 34),
-		Element = Color3.fromRGB(32, 32, 42), Hover = Color3.fromRGB(50, 50, 66),
-		Accent = Color3.fromRGB(120, 90, 255), Accent2 = Color3.fromRGB(70, 160, 255),
-		Text = Color3.fromRGB(240, 240, 248), SubText = Color3.fromRGB(160, 160, 178),
-		Stroke = Color3.fromRGB(70, 70, 95),
+	Delta = {
+		Background = Color3.fromRGB(22, 22, 30), Topbar = Color3.fromRGB(30, 30, 40),
+		Element = Color3.fromRGB(38, 38, 50), Hover = Color3.fromRGB(52, 52, 68),
+		Accent = Color3.fromRGB(0, 170, 255), Accent2 = Color3.fromRGB(70, 210, 255),
+		Text = Color3.fromRGB(240, 240, 250), SubText = Color3.fromRGB(160, 165, 185),
+		Stroke = Color3.fromRGB(60, 60, 80), Success = Color3.fromRGB(70, 200, 120),
+		Error = Color3.fromRGB(240, 80, 90), Warning = Color3.fromRGB(255, 180, 60),
 	},
-	Blue = {
-		Background = Color3.fromRGB(14, 18, 28), Topbar = Color3.fromRGB(20, 26, 40),
-		Element = Color3.fromRGB(26, 34, 54), Hover = Color3.fromRGB(40, 52, 80),
-		Accent = Color3.fromRGB(70, 120, 255), Accent2 = Color3.fromRGB(120, 180, 255),
-		Text = Color3.fromRGB(240, 245, 255), SubText = Color3.fromRGB(150, 170, 200),
-		Stroke = Color3.fromRGB(60, 80, 120),
+	Dark = {
+		Background = Color3.fromRGB(15, 15, 18), Topbar = Color3.fromRGB(22, 22, 26),
+		Element = Color3.fromRGB(30, 30, 36), Hover = Color3.fromRGB(45, 45, 54),
+		Accent = Color3.fromRGB(150, 150, 160), Accent2 = Color3.fromRGB(200, 200, 210),
+		Text = Color3.fromRGB(240, 240, 245), SubText = Color3.fromRGB(140, 140, 150),
+		Stroke = Color3.fromRGB(50, 50, 60), Success = Color3.fromRGB(70, 200, 120),
+		Error = Color3.fromRGB(240, 80, 90), Warning = Color3.fromRGB(255, 180, 60),
+	},
+	Light = {
+		Background = Color3.fromRGB(245, 245, 250), Topbar = Color3.fromRGB(235, 235, 245),
+		Element = Color3.fromRGB(255, 255, 255), Hover = Color3.fromRGB(230, 230, 240),
+		Accent = Color3.fromRGB(0, 122, 255), Accent2 = Color3.fromRGB(70, 170, 255),
+		Text = Color3.fromRGB(30, 30, 40), SubText = Color3.fromRGB(120, 120, 135),
+		Stroke = Color3.fromRGB(200, 200, 215), Success = Color3.fromRGB(60, 200, 120),
+		Error = Color3.fromRGB(235, 70, 90), Warning = Color3.fromRGB(240, 160, 60),
+	},
+	Purple = {
+		Background = Color3.fromRGB(20, 16, 28), Topbar = Color3.fromRGB(28, 22, 40),
+		Element = Color3.fromRGB(36, 28, 52), Hover = Color3.fromRGB(52, 40, 72),
+		Accent = Color3.fromRGB(140, 90, 255), Accent2 = Color3.fromRGB(190, 150, 255),
+		Text = Color3.fromRGB(240, 235, 255), SubText = Color3.fromRGB(170, 155, 195),
+		Stroke = Color3.fromRGB(60, 45, 85), Success = Color3.fromRGB(70, 200, 120),
+		Error = Color3.fromRGB(240, 80, 90), Warning = Color3.fromRGB(255, 180, 60),
 	},
 	Red = {
-		Background = Color3.fromRGB(24, 14, 16), Topbar = Color3.fromRGB(34, 20, 22),
-		Element = Color3.fromRGB(44, 26, 30), Hover = Color3.fromRGB(66, 40, 46),
+		Background = Color3.fromRGB(24, 14, 16), Topbar = Color3.fromRGB(34, 18, 22),
+		Element = Color3.fromRGB(46, 26, 30), Hover = Color3.fromRGB(68, 38, 44),
 		Accent = Color3.fromRGB(235, 70, 90), Accent2 = Color3.fromRGB(255, 140, 150),
-		Text = Color3.fromRGB(255, 240, 242), SubText = Color3.fromRGB(200, 160, 168),
-		Stroke = Color3.fromRGB(120, 60, 70),
+		Text = Color3.fromRGB(255, 240, 245), SubText = Color3.fromRGB(200, 160, 170),
+		Stroke = Color3.fromRGB(120, 55, 65), Success = Color3.fromRGB(70, 200, 120),
+		Error = Color3.fromRGB(235, 70, 90), Warning = Color3.fromRGB(255, 180, 60),
 	},
 	Green = {
-		Background = Color3.fromRGB(14, 22, 18), Topbar = Color3.fromRGB(20, 32, 26),
-		Element = Color3.fromRGB(26, 44, 34), Hover = Color3.fromRGB(40, 66, 52),
-		Accent = Color3.fromRGB(60, 200, 120), Accent2 = Color3.fromRGB(150, 240, 190),
-		Text = Color3.fromRGB(235, 250, 240), SubText = Color3.fromRGB(150, 200, 175),
-		Stroke = Color3.fromRGB(60, 120, 90),
+		Background = Color3.fromRGB(14, 20, 16), Topbar = Color3.fromRGB(20, 30, 24),
+		Element = Color3.fromRGB(26, 42, 32), Hover = Color3.fromRGB(40, 62, 48),
+		Accent = Color3.fromRGB(70, 200, 120), Accent2 = Color3.fromRGB(140, 240, 180),
+		Text = Color3.fromRGB(235, 250, 240), SubText = Color3.fromRGB(150, 190, 170),
+		Stroke = Color3.fromRGB(55, 105, 75), Success = Color3.fromRGB(70, 200, 120),
+		Error = Color3.fromRGB(240, 80, 90), Warning = Color3.fromRGB(255, 180, 60),
 	},
 	Gold = {
-		Background = Color3.fromRGB(26, 20, 8), Topbar = Color3.fromRGB(38, 30, 14),
-		Element = Color3.fromRGB(52, 40, 20), Hover = Color3.fromRGB(76, 60, 30),
-		Accent = Color3.fromRGB(235, 190, 60), Accent2 = Color3.fromRGB(255, 230, 140),
-		Text = Color3.fromRGB(255, 250, 230), SubText = Color3.fromRGB(210, 190, 140),
-		Stroke = Color3.fromRGB(130, 100, 40),
+		Background = Color3.fromRGB(22, 18, 10), Topbar = Color3.fromRGB(34, 28, 14),
+		Element = Color3.fromRGB(50, 40, 22), Hover = Color3.fromRGB(72, 58, 32),
+		Accent = Color3.fromRGB(230, 180, 60), Accent2 = Color3.fromRGB(255, 220, 130),
+		Text = Color3.fromRGB(255, 250, 230), SubText = Color3.fromRGB(200, 185, 140),
+		Stroke = Color3.fromRGB(120, 95, 45), Success = Color3.fromRGB(70, 200, 120),
+		Error = Color3.fromRGB(240, 80, 90), Warning = Color3.fromRGB(255, 180, 60),
 	},
 	Cyan = {
-		Background = Color3.fromRGB(12, 22, 26), Topbar = Color3.fromRGB(18, 32, 38),
-		Element = Color3.fromRGB(24, 44, 52), Hover = Color3.fromRGB(38, 66, 76),
-		Accent = Color3.fromRGB(60, 200, 230), Accent2 = Color3.fromRGB(150, 240, 250),
-		Text = Color3.fromRGB(230, 250, 255), SubText = Color3.fromRGB(150, 200, 210),
-		Stroke = Color3.fromRGB(50, 110, 130),
+		Background = Color3.fromRGB(12, 20, 24), Topbar = Color3.fromRGB(18, 30, 36),
+		Element = Color3.fromRGB(24, 42, 50), Hover = Color3.fromRGB(38, 62, 72),
+		Accent = Color3.fromRGB(60, 200, 230), Accent2 = Color3.fromRGB(140, 240, 250),
+		Text = Color3.fromRGB(230, 250, 255), SubText = Color3.fromRGB(150, 190, 200),
+		Stroke = Color3.fromRGB(50, 100, 120), Success = Color3.fromRGB(70, 200, 120),
+		Error = Color3.fromRGB(240, 80, 90), Warning = Color3.fromRGB(255, 180, 60),
 	},
 	Pink = {
-		Background = Color3.fromRGB(26, 14, 22), Topbar = Color3.fromRGB(36, 20, 32),
-		Element = Color3.fromRGB(50, 28, 42), Hover = Color3.fromRGB(72, 42, 62),
+		Background = Color3.fromRGB(24, 14, 20), Topbar = Color3.fromRGB(36, 20, 30),
+		Element = Color3.fromRGB(52, 28, 44), Hover = Color3.fromRGB(74, 42, 62),
 		Accent = Color3.fromRGB(255, 100, 200), Accent2 = Color3.fromRGB(255, 170, 230),
 		Text = Color3.fromRGB(255, 240, 250), SubText = Color3.fromRGB(210, 165, 200),
-		Stroke = Color3.fromRGB(120, 60, 100),
+		Stroke = Color3.fromRGB(120, 60, 100), Success = Color3.fromRGB(70, 200, 120),
+		Error = Color3.fromRGB(240, 80, 90), Warning = Color3.fromRGB(255, 180, 60),
 	},
 	Orange = {
-		Background = Color3.fromRGB(26, 18, 8), Topbar = Color3.fromRGB(38, 26, 14),
-		Element = Color3.fromRGB(54, 38, 22), Hover = Color3.fromRGB(78, 56, 34),
+		Background = Color3.fromRGB(24, 16, 8), Topbar = Color3.fromRGB(36, 24, 12),
+		Element = Color3.fromRGB(54, 38, 20), Hover = Color3.fromRGB(78, 56, 32),
 		Accent = Color3.fromRGB(255, 150, 60), Accent2 = Color3.fromRGB(255, 200, 130),
 		Text = Color3.fromRGB(255, 245, 230), SubText = Color3.fromRGB(210, 180, 150),
-		Stroke = Color3.fromRGB(130, 85, 45),
+		Stroke = Color3.fromRGB(130, 80, 40), Success = Color3.fromRGB(70, 200, 120),
+		Error = Color3.fromRGB(240, 80, 90), Warning = Color3.fromRGB(255, 180, 60),
 	},
 	Lime = {
-		Background = Color3.fromRGB(18, 24, 10), Topbar = Color3.fromRGB(26, 34, 16),
-		Element = Color3.fromRGB(38, 50, 24), Hover = Color3.fromRGB(56, 72, 36),
+		Background = Color3.fromRGB(16, 22, 10), Topbar = Color3.fromRGB(24, 32, 16),
+		Element = Color3.fromRGB(38, 48, 24), Hover = Color3.fromRGB(56, 70, 36),
 		Accent = Color3.fromRGB(170, 230, 60), Accent2 = Color3.fromRGB(220, 250, 130),
 		Text = Color3.fromRGB(245, 255, 230), SubText = Color3.fromRGB(190, 210, 150),
-		Stroke = Color3.fromRGB(90, 130, 50),
+		Stroke = Color3.fromRGB(85, 125, 50), Success = Color3.fromRGB(70, 200, 120),
+		Error = Color3.fromRGB(240, 80, 90), Warning = Color3.fromRGB(255, 180, 60),
 	},
 	Rose = {
 		Background = Color3.fromRGB(24, 14, 18), Topbar = Color3.fromRGB(34, 20, 26),
 		Element = Color3.fromRGB(48, 28, 34), Hover = Color3.fromRGB(70, 42, 52),
 		Accent = Color3.fromRGB(255, 110, 150), Accent2 = Color3.fromRGB(255, 170, 190),
 		Text = Color3.fromRGB(255, 240, 245), SubText = Color3.fromRGB(210, 165, 180),
-		Stroke = Color3.fromRGB(120, 60, 80),
+		Stroke = Color3.fromRGB(120, 60, 80), Success = Color3.fromRGB(70, 200, 120),
+		Error = Color3.fromRGB(240, 80, 90), Warning = Color3.fromRGB(255, 180, 60),
 	},
 	Mint = {
-		Background = Color3.fromRGB(14, 24, 20), Topbar = Color3.fromRGB(20, 34, 28),
-		Element = Color3.fromRGB(26, 46, 40), Hover = Color3.fromRGB(40, 68, 60),
-		Accent = Color3.fromRGB(60, 220, 180), Accent2 = Color3.fromRGB(150, 245, 220),
-		Text = Color3.fromRGB(235, 255, 250), SubText = Color3.fromRGB(150, 205, 190),
-		Stroke = Color3.fromRGB(55, 120, 100),
+		Background = Color3.fromRGB(14, 22, 20), Topbar = Color3.fromRGB(20, 32, 28),
+		Element = Color3.fromRGB(26, 44, 38), Hover = Color3.fromRGB(40, 64, 56),
+		Accent = Color3.fromRGB(60, 220, 180), Accent2 = Color3.fromRGB(140, 245, 220),
+		Text = Color3.fromRGB(235, 255, 250), SubText = Color3.fromRGB(150, 200, 190),
+		Stroke = Color3.fromRGB(55, 110, 95), Success = Color3.fromRGB(70, 200, 120),
+		Error = Color3.fromRGB(240, 80, 90), Warning = Color3.fromRGB(255, 180, 60),
 	},
 	Violet = {
-		Background = Color3.fromRGB(22, 14, 26), Topbar = Color3.fromRGB(32, 20, 38),
-		Element = Color3.fromRGB(44, 28, 54), Hover = Color3.fromRGB(66, 42, 80),
+		Background = Color3.fromRGB(20, 14, 24), Topbar = Color3.fromRGB(30, 20, 36),
+		Element = Color3.fromRGB(44, 28, 54), Hover = Color3.fromRGB(64, 42, 78),
 		Accent = Color3.fromRGB(180, 80, 255), Accent2 = Color3.fromRGB(220, 150, 255),
 		Text = Color3.fromRGB(250, 240, 255), SubText = Color3.fromRGB(190, 165, 210),
-		Stroke = Color3.fromRGB(100, 60, 130),
+		Stroke = Color3.fromRGB(95, 60, 125), Success = Color3.fromRGB(70, 200, 120),
+		Error = Color3.fromRGB(240, 80, 90), Warning = Color3.fromRGB(255, 180, 60),
 	},
 }
 
 local Theme = {}
-for k, v in pairs(THEMES.Purple) do Theme[k] = v end
+for k, v in pairs(THEMES.Delta) do Theme[k] = v end
 Library.Theme = Theme
 
 local TypeColors = {
 	info = Color3.fromRGB(90, 150, 255), success = Color3.fromRGB(80, 200, 120),
 	warn = Color3.fromRGB(245, 180, 60), error = Color3.fromRGB(235, 80, 90),
 }
-local TypeIcons = { info = "i", success = "✓", warn = "!", error = "×" }
-local ROW = 46
+local TypeIcons = { info = "ℹ", success = "✓", warn = "⚠", error = "✕" }
+local ROW = 52
 
 -- ============================================================
 -- ХЕЛПЕРЫ
@@ -160,16 +188,17 @@ end
 local function label(pa, tx, sz, po, ts)
 	return create("TextLabel", {
 		Size = sz, Position = po, BackgroundTransparency = 1, Text = tx or "",
-		TextColor3 = Theme.Text, Font = Enum.Font.GothamMedium, TextSize = ts or 15,
+		TextColor3 = Theme.Text, Font = Enum.Font.Gotham, TextSize = ts or 15,
 		TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = pa,
 	})
 end
 
+-- Строка без обводки — как в Delta
 local function newRow(pa, h)
 	return create("Frame", {
 		Size = UDim2.new(1, 0, 0, h or ROW), BackgroundColor3 = Theme.Element,
 		BorderSizePixel = 0, ClipsDescendants = true, Parent = pa,
-	}, { corner(10), stroke(Theme.Stroke, 0.6) })
+	}, { corner(14) })
 end
 
 local function ripple(row, input)
@@ -177,7 +206,7 @@ local function ripple(row, input)
 	local c = create("Frame", {
 		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, x, 0.5, 0),
 		Size = UDim2.fromOffset(0, 0), BackgroundColor3 = Color3.new(1, 1, 1),
-		BackgroundTransparency = 0.8, BorderSizePixel = 0, ZIndex = 2, Parent = row,
+		BackgroundTransparency = 0.85, BorderSizePixel = 0, ZIndex = 2, Parent = row,
 	}, { round() })
 	local d = math.max(row.AbsoluteSize.X, 80) * 1.6
 	tween(c, 0.5, { Size = UDim2.fromOffset(d, d), BackgroundTransparency = 1 })
@@ -194,7 +223,7 @@ local function clickArea(row, h)
 	return b
 end
 
--- CODEC для JSON
+-- CODEC
 local function encodeV(v)
 	if typeof(v) == "Color3" then return { __t = "Color3", r = v.R, g = v.G, b = v.B } end
 	if typeof(v) == "EnumItem" then return { __t = "Enum", name = v.Name } end
@@ -221,11 +250,16 @@ function Library:CreateWindow(opts)
 	self.Flags = {}; self.Open = true; self.Minimized = false
 	self.ToggleKey = opts.ToggleKey or Enum.KeyCode.RightShift
 	self.ConfigName = opts.ConfigName or "default"
+	self.CurrentTheme = opts.Theme or "Delta"
+
+	if THEMES[self.CurrentTheme] then
+		for k, v in pairs(THEMES[self.CurrentTheme]) do Theme[k] = v end
+	end
 
 	local title = opts.Title or "Window"
 	local cam = workspace.CurrentCamera
 	local function fullSize() local v = cam.ViewportSize
-		return Vector2.new(math.min(580, v.X * 0.94), math.min(420, v.Y * 0.78)) end
+		return Vector2.new(math.min(560, v.X * 0.94), math.min(420, v.Y * 0.78)) end
 	self._size = fullSize()
 
 	self.Gui = create("ScreenGui", {
@@ -235,56 +269,69 @@ function Library:CreateWindow(opts)
 	})
 	mountGui(self.Gui)
 
+	-- Main — БЕЗ прозрачности, чистый тёмный фон как в Delta
 	self.Main = create("CanvasGroup", {
 		Size = UDim2.fromOffset(self._size.X, self._size.Y),
 		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
 		BackgroundColor3 = Theme.Background, BorderSizePixel = 0, Parent = self.Gui,
-	}, { corner(16), stroke(Theme.Accent, 0.55, 1.5) })
+	}, { corner(20) })
 	self.Scale = create("UIScale", { Parent = self.Main })
 
+	-- Верхняя панель — минималистичная, без линии
 	local header = create("Frame", {
-		Size = UDim2.new(1, 0, 0, 48), BackgroundColor3 = Theme.Topbar,
+		Size = UDim2.new(1, 0, 0, 52), BackgroundColor3 = Theme.Topbar,
 		BorderSizePixel = 0, Parent = self.Main,
-	})
+	}, { corner(20) })
 	create("Frame", {
-		Size = UDim2.new(1, 0, 0, 2), Position = UDim2.new(0, 0, 1, -2),
-		BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Parent = header,
-	}, { gradient(0) })
-	local tLbl = label(header, title, UDim2.new(1, -100, 0, opts.Subtitle and 24 or 46), UDim2.fromOffset(16, opts.Subtitle and 5 or 0), 17)
+		Size = UDim2.new(1, 0, 0, 16), Position = UDim2.new(0, 0, 1, -16),
+		BackgroundColor3 = Theme.Topbar, BorderSizePixel = 0, Parent = header,
+	})
+
+	local tLbl = label(header, title, UDim2.new(1, -100, 0, 24), UDim2.fromOffset(20, opts.Subtitle and 6 or 14), 18)
 	tLbl.Font = Enum.Font.GothamBold
 	if opts.Subtitle then
-		local s = label(header, opts.Subtitle, UDim2.new(1, -100, 0, 16), UDim2.fromOffset(16, 28), 12)
+		local s = label(header, opts.Subtitle, UDim2.new(1, -100, 0, 16), UDim2.fromOffset(20, 30), 12)
 		s.TextColor3 = Theme.SubText
 	end
+
+	-- Кнопки — кружки, как в Delta
 	local function hBtn(t, x, cb)
 		local b = create("TextButton", {
-			Size = UDim2.fromOffset(44, 44), Position = UDim2.new(1, x, 0, 2),
-			BackgroundTransparency = 1, Text = t, TextColor3 = Theme.SubText,
-			Font = Enum.Font.GothamBold, TextSize = 18, Parent = header,
-		})
-		b.MouseButton1Click:Connect(cb); return b
+			Size = UDim2.fromOffset(34, 34), Position = UDim2.new(1, x, 0.5, -17),
+			BackgroundColor3 = Theme.Element, Text = t, TextColor3 = Theme.SubText,
+			Font = Enum.Font.GothamBold, TextSize = 15, AutoButtonColor = false, Parent = header,
+		}, { round() })
+		b.MouseEnter:Connect(function() tween(b, 0.15, { BackgroundColor3 = Theme.Hover, TextColor3 = Theme.Text }) end)
+		b.MouseLeave:Connect(function() tween(b, 0.15, { BackgroundColor3 = Theme.Element, TextColor3 = Theme.SubText }) end)
+		b.MouseButton1Click:Connect(cb)
+		return b
 	end
-	hBtn("X", -46, function() self:Destroy() end)
-	hBtn("-", -90, function() self:SetMinimized(not self.Minimized) end)
+	hBtn("✕", -48, function() self:Destroy() end)
+	hBtn("−", -90, function() self:SetMinimized(not self.Minimized) end)
 
+	-- Body
 	self.Body = create("Frame", {
-		Size = UDim2.new(1, 0, 1, -48), Position = UDim2.fromOffset(0, 48),
+		Size = UDim2.new(1, 0, 1, -52), Position = UDim2.fromOffset(0, 52),
 		BackgroundTransparency = 1, Parent = self.Main,
 	})
+
+	-- TabBar — пилюли, как в Delta
 	self.TabBar = create("ScrollingFrame", {
-		Size = UDim2.new(1, 0, 0, 44), BackgroundTransparency = 1, BorderSizePixel = 0,
+		Size = UDim2.new(1, 0, 0, 46), BackgroundTransparency = 1, BorderSizePixel = 0,
 		ScrollBarThickness = 0, ScrollingDirection = Enum.ScrollingDirection.X,
 		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.X, Parent = self.Body,
 	})
 	create("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal,
 		VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 8),
 		SortOrder = Enum.SortOrder.LayoutOrder, Parent = self.TabBar })
-	create("UIPadding", { PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12), Parent = self.TabBar })
+	create("UIPadding", { PaddingLeft = UDim.new(0, 16), PaddingRight = UDim.new(0, 16), Parent = self.TabBar })
 
 	self.Pages = create("Frame", {
-		Size = UDim2.new(1, 0, 1, -44), Position = UDim2.fromOffset(0, 44),
+		Size = UDim2.new(1, 0, 1, -46), Position = UDim2.fromOffset(0, 46),
 		BackgroundTransparency = 1, Parent = self.Body,
 	})
+
+	-- Notifications
 	self.Notes = create("Frame", {
 		Size = UDim2.fromOffset(math.min(320, cam.ViewportSize.X * 0.9), 400),
 		AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 60),
@@ -293,12 +340,13 @@ function Library:CreateWindow(opts)
 	create("UIListLayout", { Padding = UDim.new(0, 8),
 		HorizontalAlignment = Enum.HorizontalAlignment.Center, Parent = self.Notes })
 
+	-- FAB — круглая, акцентная, как у Delta
 	self.Fab = create("TextButton", {
-		Size = UDim2.fromOffset(54, 54), Position = UDim2.new(0, 14, 0.45, 0),
-		BackgroundColor3 = Color3.new(1, 1, 1), Text = title:sub(1, 1):upper(),
-		TextColor3 = Color3.new(1, 1, 1), Font = Enum.Font.GothamBold, TextSize = 24,
+		Size = UDim2.fromOffset(56, 56), Position = UDim2.new(0, 16, 0.45, 0),
+		BackgroundColor3 = Theme.Accent, Text = title:sub(1, 1):upper(),
+		TextColor3 = Color3.new(1, 1, 1), Font = Enum.Font.GothamBold, TextSize = 26,
 		AutoButtonColor = false, Parent = self.Gui,
-	}, { round(), gradient(45), stroke(Color3.new(1, 1, 1), 0.6, 2) })
+	}, { round() })
 
 	self:_drag(header, self.Main)
 	self:_drag(self.Fab, self.Fab, function() self:SetOpen(not self.Open) end)
@@ -307,13 +355,14 @@ function Library:CreateWindow(opts)
 	end)
 	self:_connect(cam:GetPropertyChangedSignal("ViewportSize"), function()
 		self._size = fullSize()
-		self.Main.Size = UDim2.fromOffset(self._size.X, self.Minimized and 48 or self._size.Y)
+		self.Main.Size = UDim2.fromOffset(self._size.X, self.Minimized and 52 or self._size.Y)
 		self.Notes.Size = UDim2.fromOffset(math.min(320, cam.ViewportSize.X * 0.9), 400)
 	end)
 
-	self.Main.GroupTransparency = 1; self.Scale.Scale = 0.9
-	tween(self.Main, 0.3, { GroupTransparency = 0 })
-	tween(self.Scale, 0.35, { Scale = 1 }, Enum.EasingStyle.Back)
+	self.Main.GroupTransparency = 1; self.Scale.Scale = 0.92
+	tween(self.Main, 0.28, { GroupTransparency = 0 })
+	tween(self.Scale, 0.32, { Scale = 1 }, Enum.EasingStyle.Quint)
+
 	return self
 end
 
@@ -344,17 +393,17 @@ function Window:SetOpen(v)
 	if v then
 		self.Main.Visible = true
 		tween(self.Main, 0.22, { GroupTransparency = 0 })
-		tween(self.Scale, 0.3, { Scale = 1 }, Enum.EasingStyle.Back)
+		tween(self.Scale, 0.3, { Scale = 1 }, Enum.EasingStyle.Quint)
 	else
 		tween(self.Main, 0.15, { GroupTransparency = 1 })
-		tween(self.Scale, 0.15, { Scale = 0.9 })
+		tween(self.Scale, 0.15, { Scale = 0.92 })
 		task.delay(0.16, function() if not self.Open then self.Main.Visible = false end end)
 	end
 end
 
 function Window:SetMinimized(v)
 	self.Minimized = v
-	tween(self.Main, 0.28, { Size = UDim2.fromOffset(self._size.X, v and 48 or self._size.Y) }, Enum.EasingStyle.Quint)
+	tween(self.Main, 0.28, { Size = UDim2.fromOffset(self._size.X, v and 52 or self._size.Y) }, Enum.EasingStyle.Quint)
 end
 
 function Window:Destroy()
@@ -374,24 +423,25 @@ function Window:SelectTab(tab)
 end
 
 function Window:CreateTab(name)
+	-- Пилюля как в Delta
 	local button = create("TextButton", {
-		Size = UDim2.fromOffset(0, 32), AutomaticSize = Enum.AutomaticSize.X,
+		Size = UDim2.fromOffset(0, 34), AutomaticSize = Enum.AutomaticSize.X,
 		BackgroundColor3 = Theme.Element, BorderSizePixel = 0, Text = name,
 		TextColor3 = Theme.SubText, Font = Enum.Font.GothamBold, TextSize = 14,
 		AutoButtonColor = false, LayoutOrder = #self._tabs, Parent = self.TabBar,
-	}, { round(), create("UIPadding", { PaddingLeft = UDim.new(0, 16), PaddingRight = UDim.new(0, 16) }) })
+	}, { round(), create("UIPadding", { PaddingLeft = UDim.new(0, 18), PaddingRight = UDim.new(0, 18) }) })
 
 	local page = create("ScrollingFrame", {
 		Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0,
-		ScrollBarThickness = 2, ScrollBarImageColor3 = Theme.Accent,
+		ScrollBarThickness = 3, ScrollBarImageColor3 = Theme.Accent,
 		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y,
 		Visible = false, Parent = self.Pages,
 	})
-	create("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder, Parent = page })
-	create("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingBottom = UDim.new(0, 14),
-		PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12), Parent = page })
+	create("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder, Parent = page })
+	create("UIPadding", { PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 16),
+		PaddingLeft = UDim.new(0, 16), PaddingRight = UDim.new(0, 16), Parent = page })
 
-	local tab = setmetatable({ Window = self, Page = page, Button = button }, Tab)
+	local tab = setmetatable({ Window = self, Page = page, Button = button, Name = name }, Tab)
 	table.insert(self._tabs, tab)
 	button.MouseButton1Click:Connect(function() self:SelectTab(tab) end)
 	if #self._tabs == 1 then self:SelectTab(tab) end
@@ -399,30 +449,35 @@ function Window:CreateTab(name)
 end
 
 -- ============================================================
--- NOTIFY
+-- NOTIFY — в стиле Delta: чистая карточка с иконкой
 -- ============================================================
 function Window:Notify(o)
 	if type(o) ~= "table" then o = { Text = tostring(o) } end
 	local kind = o.Type or "info"
-	local color = TypeColors[kind] or TypeColors.info
-	local icon = TypeIcons[kind] or "i"
+	local color = Theme[kind:sub(1,1):upper() .. kind:sub(2)] or TypeColors[kind] or Theme.Accent
+	local icon = TypeIcons[kind] or "ℹ"
 	local dur = o.Duration or 4
+
 	local note = create("CanvasGroup", {
-		Size = UDim2.new(1, 0, 0, 72), BackgroundColor3 = Theme.Topbar,
+		Size = UDim2.new(1, 0, 0, 76), BackgroundColor3 = Theme.Topbar,
 		BorderSizePixel = 0, GroupTransparency = 1, Parent = self.Notes,
-	}, { corner(12), stroke(color, 0.4, 1.5) })
-	create("Frame", { Size = UDim2.new(0, 4, 1, 0), BackgroundColor3 = color, BorderSizePixel = 0, Parent = note })
-	local ib = create("Frame", { Size = UDim2.fromOffset(26, 26), Position = UDim2.fromOffset(14, 23),
-		BackgroundColor3 = color, BackgroundTransparency = 0.75, BorderSizePixel = 0, Parent = note }, { corner(6) })
+	}, { corner(16) })
+
+	-- Иконка-кружок
+	local ib = create("Frame", { Size = UDim2.fromOffset(36, 36), Position = UDim2.fromOffset(12, 20),
+		BackgroundColor3 = color, BackgroundTransparency = 0.85, BorderSizePixel = 0, Parent = note }, { round() })
 	create("TextLabel", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = icon,
-		TextColor3 = color, Font = Enum.Font.GothamBold, TextSize = 14, Parent = ib })
-	local t = label(note, o.Title or "", UDim2.new(1, -60, 0, 20), UDim2.fromOffset(48, 8), 14)
+		TextColor3 = color, Font = Enum.Font.GothamBold, TextSize = 18, Parent = ib })
+
+	local t = label(note, o.Title or "", UDim2.new(1, -60, 0, 22), UDim2.fromOffset(58, 12), 15)
 	t.Font = Enum.Font.GothamBold
-	local d = label(note, o.Text or "", UDim2.new(1, -60, 0, 36), UDim2.fromOffset(48, 28), 12)
+	local d = label(note, o.Text or "", UDim2.new(1, -60, 0, 40), UDim2.fromOffset(58, 34), 12)
 	d.TextColor3 = Theme.SubText; d.TextWrapped = true; d.TextYAlignment = Enum.TextYAlignment.Top
+
 	local bar = create("Frame", { Size = UDim2.new(1, 0, 0, 3), Position = UDim2.new(0, 0, 1, -3),
-		BackgroundColor3 = color, BorderSizePixel = 0, Parent = note })
-	tween(note, 0.3, { GroupTransparency = 0 }, Enum.EasingStyle.Back)
+		BackgroundColor3 = color, BorderSizePixel = 0, Parent = note }, { corner(2) })
+
+	tween(note, 0.3, { GroupTransparency = 0 }, Enum.EasingStyle.Quint)
 	tween(bar, dur, { Size = UDim2.new(0, 0, 0, 3) }, Enum.EasingStyle.Linear)
 	task.delay(dur, function()
 		if note.Parent then tween(note, 0.25, { GroupTransparency = 1 }); task.wait(0.3); note:Destroy() end
@@ -435,29 +490,28 @@ function Window:NotifyWithButton(cfg)
 	local color = TypeColors[kind]
 	local icon = TypeIcons[kind]
 	local note = create("CanvasGroup", {
-		Size = UDim2.new(1, 0, 0, 88), BackgroundColor3 = Theme.Topbar,
+		Size = UDim2.new(1, 0, 0, 96), BackgroundColor3 = Theme.Topbar,
 		BorderSizePixel = 0, GroupTransparency = 1, Parent = self.Notes,
-	}, { corner(12), stroke(color, 0.4, 1.5) })
-	create("Frame", { Size = UDim2.new(0, 4, 1, 0), BackgroundColor3 = color, BorderSizePixel = 0, Parent = note })
-	local ib = create("Frame", { Size = UDim2.fromOffset(26, 26), Position = UDim2.fromOffset(14, 31),
-		BackgroundColor3 = color, BackgroundTransparency = 0.75, BorderSizePixel = 0, Parent = note }, { corner(6) })
+	}, { corner(16) })
+	local ib = create("Frame", { Size = UDim2.fromOffset(36, 36), Position = UDim2.fromOffset(12, 30),
+		BackgroundColor3 = color, BackgroundTransparency = 0.85, BorderSizePixel = 0, Parent = note }, { round() })
 	create("TextLabel", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = icon,
-		TextColor3 = color, Font = Enum.Font.GothamBold, TextSize = 14, Parent = ib })
-	local t = label(note, cfg.Title or "", UDim2.new(1, -120, 0, 20), UDim2.fromOffset(48, 10), 14)
+		TextColor3 = color, Font = Enum.Font.GothamBold, TextSize = 18, Parent = ib })
+	local t = label(note, cfg.Title or "", UDim2.new(1, -130, 0, 22), UDim2.fromOffset(58, 14), 15)
 	t.Font = Enum.Font.GothamBold
-	local d = label(note, cfg.Text or "", UDim2.new(1, -120, 0, 40), UDim2.fromOffset(48, 32), 12)
+	local d = label(note, cfg.Text or "", UDim2.new(1, -130, 0, 44), UDim2.fromOffset(58, 38), 12)
 	d.TextColor3 = Theme.SubText; d.TextWrapped = true; d.TextYAlignment = Enum.TextYAlignment.Top
 	local btn = create("TextButton", {
-		Size = UDim2.fromOffset(80, 34), Position = UDim2.new(1, -92, 0.5, -17),
+		Size = UDim2.fromOffset(86, 36), Position = UDim2.new(1, -98, 0.5, -18),
 		BackgroundColor3 = color, BorderSizePixel = 0, Text = cfg.ButtonText or "OK",
 		TextColor3 = Color3.new(1, 1, 1), Font = Enum.Font.GothamBold, TextSize = 13,
 		AutoButtonColor = false, Parent = note,
-	}, { corner(8) })
+	}, { corner(18) })
 	btn.MouseButton1Click:Connect(function()
 		safe(cfg.ButtonCallback)
 		tween(note, 0.2, { GroupTransparency = 1 }); task.delay(0.25, function() note:Destroy() end)
 	end)
-	tween(note, 0.3, { GroupTransparency = 0 }, Enum.EasingStyle.Back)
+	tween(note, 0.3, { GroupTransparency = 0 }, Enum.EasingStyle.Quint)
 	task.delay(cfg.Duration or 8, function()
 		if note.Parent then tween(note, 0.25, { GroupTransparency = 1 }); task.wait(0.3); note:Destroy() end
 	end)
@@ -470,6 +524,16 @@ function Window:_register(flag, obj, value)
 	if not flag then return end
 	self.Flags[flag] = value
 	self._setters[flag] = function(v, silent) if obj.Set then obj:Set(v, silent) end end
+	-- AutoSave
+	local oldSet = obj.Set
+	if oldSet then
+		obj.Set = function(s, v, silent)
+			oldSet(s, v, silent)
+			if not silent and s and self._autoSave then
+				task.delay(0.5, function() s:SaveConfig() end)
+			end
+		end
+	end
 end
 
 function Window:SaveConfig(name)
@@ -493,20 +557,26 @@ function Window:LoadConfig(name)
 end
 
 -- ============================================================
--- БАЗОВЫЕ ЭЛЕМЕНТЫ
+-- ЭЛЕМЕНТЫ
 -- ============================================================
 function Tab:AddSection(text)
-	local l = label(self.Page, string.upper(text or ""), UDim2.new(1, 0, 0, 24), nil, 12)
-	l.Font = Enum.Font.GothamBold; l.TextColor3 = Theme.Accent2
+	local l = label(self.Page, string.upper(text or ""), UDim2.new(1, 0, 0, 26), UDim2.fromOffset(4, 0), 12)
+	l.Font = Enum.Font.GothamBold; l.TextColor3 = Theme.Accent
+end
+
+function Tab:AddSectionIcon(icon, text)
+	local row = create("Frame", { Size = UDim2.new(1, 0, 0, 26), BackgroundTransparency = 1, Parent = self.Page })
+	local ic = label(row, icon or "•", UDim2.fromOffset(20, 26), UDim2.fromOffset(4, 0), 14)
+	ic.TextColor3 = Theme.Accent
+	local l = label(row, string.upper(text or ""), UDim2.new(1, -30, 1, 0), UDim2.fromOffset(26, 0), 12)
+	l.Font = Enum.Font.GothamBold; l.TextColor3 = Theme.Accent
 end
 
 function Tab:AddLabel(text)
-	local row = create("Frame", {
-		Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
-		BackgroundColor3 = Theme.Element, BorderSizePixel = 0, Parent = self.Page,
-	}, { corner(10), stroke(Theme.Stroke, 0.6),
-		create("UIPadding", { PaddingTop = UDim.new(0, 12), PaddingBottom = UDim.new(0, 12),
-			PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 14) }) })
+	local row = create("Frame", { Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundColor3 = Theme.Element, BorderSizePixel = 0, Parent = self.Page },
+		{ corner(14), create("UIPadding", { PaddingTop = UDim.new(0, 14), PaddingBottom = UDim.new(0, 14),
+			PaddingLeft = UDim.new(0, 16), PaddingRight = UDim.new(0, 16) }) })
 	local l = label(row, text, UDim2.new(1, 0, 0, 0))
 	l.AutomaticSize = Enum.AutomaticSize.Y; l.TextWrapped = true
 	l.TextTruncate = Enum.TextTruncate.None; l.TextColor3 = Theme.SubText
@@ -515,8 +585,8 @@ end
 
 function Tab:AddButton(o)
 	local row = newRow(self.Page)
-	local l = label(row, o.Name, UDim2.new(1, -28, 1, 0), UDim2.fromOffset(14, 0))
-	l.TextXAlignment = Enum.TextXAlignment.Center
+	local l = label(row, o.Name, UDim2.new(1, -28, 1, 0), UDim2.fromOffset(16, 0), 15)
+	l.TextXAlignment = Enum.TextXAlignment.Left; l.Font = Enum.Font.GothamMedium
 	local btn = clickArea(row)
 	btn.MouseButton1Click:Connect(function() safe(o.Callback) end)
 end
@@ -525,10 +595,10 @@ function Tab:AddToggle(o)
 	local win = self.Window
 	local state = o.Default or false
 	local row = newRow(self.Page)
-	label(row, o.Name, UDim2.new(1, -90, 1, 0), UDim2.fromOffset(14, 0))
-	local sw = create("Frame", { Size = UDim2.fromOffset(48, 26), Position = UDim2.new(1, -62, 0.5, -13),
+	label(row, o.Name, UDim2.new(1, -90, 1, 0), UDim2.fromOffset(16, 0), 15).Font = Enum.Font.GothamMedium
+	local sw = create("Frame", { Size = UDim2.fromOffset(52, 30), Position = UDim2.new(1, -68, 0.5, -15),
 		BackgroundColor3 = state and Theme.Accent or Theme.Hover, BorderSizePixel = 0, Parent = row }, { round() })
-	local knob = create("Frame", { Size = UDim2.fromOffset(20, 20),
+	local knob = create("Frame", { Size = UDim2.fromOffset(24, 24),
 		Position = state and UDim2.fromOffset(25, 3) or UDim2.fromOffset(3, 3),
 		BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Parent = sw }, { round() })
 	local btn = clickArea(row)
@@ -536,8 +606,8 @@ function Tab:AddToggle(o)
 	local function set(v, silent)
 		state = v and true or false
 		if o.Flag then win.Flags[o.Flag] = state end
-		tween(sw, 0.18, { BackgroundColor3 = state and Theme.Accent or Theme.Hover })
-		tween(knob, 0.18, { Position = state and UDim2.fromOffset(25, 3) or UDim2.fromOffset(3, 3) }, Enum.EasingStyle.Back)
+		tween(sw, 0.22, { BackgroundColor3 = state and Theme.Accent or Theme.Hover })
+		tween(knob, 0.22, { Position = state and UDim2.fromOffset(25, 3) or UDim2.fromOffset(3, 3) }, Enum.EasingStyle.Quint)
 		if not silent then safe(o.Callback, state) end
 	end
 	btn.MouseButton1Click:Connect(function() set(not state) end)
@@ -551,18 +621,19 @@ function Tab:AddSlider(o)
 	local win, page = self.Window, self.Page
 	local min, max, inc = o.Min or 0, o.Max or 100, o.Increment or 1
 	local value = o.Default or min
-	local row = newRow(page, 64)
-	label(row, o.Name, UDim2.new(1, -100, 0, 28), UDim2.fromOffset(14, 6))
-	local vl = label(row, "", UDim2.new(0, 80, 0, 28), UDim2.new(1, -94, 0, 6))
-	vl.TextXAlignment = Enum.TextXAlignment.Right; vl.TextColor3 = Theme.SubText
-	local bar = create("Frame", { Size = UDim2.new(1, -28, 0, 8), Position = UDim2.fromOffset(14, 44),
+	local row = newRow(page, 70)
+	label(row, o.Name, UDim2.new(1, -110, 0, 28), UDim2.fromOffset(16, 8), 15).Font = Enum.Font.GothamMedium
+	local vl = label(row, "", UDim2.new(0, 90, 0, 28), UDim2.new(1, -106, 0, 8), 14)
+	vl.TextXAlignment = Enum.TextXAlignment.Right; vl.TextColor3 = Theme.Accent
+	vl.Font = Enum.Font.GothamBold
+	local bar = create("Frame", { Size = UDim2.new(1, -32, 0, 10), Position = UDim2.fromOffset(16, 46),
 		BackgroundColor3 = Theme.Hover, BorderSizePixel = 0, Parent = row }, { round() })
-	local fill = create("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = Color3.new(1, 1, 1),
-		BorderSizePixel = 0, Parent = bar }, { round(), gradient(0) })
-	create("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(20, 20),
+	local fill = create("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = Theme.Accent,
+		BorderSizePixel = 0, Parent = bar }, { round() })
+	local knob = create("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(22, 22),
 		Position = UDim2.fromScale(1, 0.5), BackgroundColor3 = Color3.new(1, 1, 1),
-		BorderSizePixel = 0, Parent = fill }, { round(), stroke(Theme.Accent, 0, 2) })
-	local hit = create("Frame", { Size = UDim2.new(1, 0, 0, 40), Position = UDim2.fromOffset(0, 24),
+		BorderSizePixel = 0, Parent = fill }, { round() })
+	local hit = create("Frame", { Size = UDim2.new(1, 0, 0, 44), Position = UDim2.fromOffset(0, 26),
 		BackgroundTransparency = 1, Active = true, Parent = row })
 	local obj = {}
 	local function set(v, silent)
@@ -589,15 +660,16 @@ end
 
 function Tab:AddTextbox(o)
 	local win = self.Window
-	local row = newRow(self.Page)
-	label(row, o.Name, UDim2.new(0.45, -14, 1, 0), UDim2.fromOffset(14, 0))
+	local row = newRow(self.Page, 60)
+	local l = label(row, o.Name, UDim2.new(0.4, -16, 0, 20), UDim2.fromOffset(16, 6), 14)
+	l.TextColor3 = Theme.SubText
 	local box = create("TextBox", {
-		Size = UDim2.new(0.55, -22, 0, 32), Position = UDim2.new(0.45, 8, 0.5, -16),
+		Size = UDim2.new(0.6, -24, 0, 40), Position = UDim2.new(0.4, 8, 0.5, -20),
 		BackgroundColor3 = Theme.Hover, BorderSizePixel = 0, Text = o.Default or "",
 		PlaceholderText = o.Placeholder or "", PlaceholderColor3 = Theme.SubText,
 		TextColor3 = Theme.Text, Font = Enum.Font.Gotham, TextSize = 14,
 		ClearTextOnFocus = false, Parent = row,
-	}, { corner(8), create("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8) }) })
+	}, { corner(10), create("UIPadding", { PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) }) })
 	local obj = {}
 	box.FocusLost:Connect(function(e)
 		if o.Flag then win.Flags[o.Flag] = box.Text end
@@ -616,20 +688,21 @@ function Tab:AddDropdown(o)
 	local current = o.Default
 	local open = false
 	local row = newRow(self.Page)
-	label(row, o.Name, UDim2.new(0.5, -14, 0, ROW), UDim2.fromOffset(14, 0))
-	local sel = label(row, "", UDim2.new(0.5, -40, 0, ROW), UDim2.new(0.5, 0, 0, 0))
-	sel.TextXAlignment = Enum.TextXAlignment.Right; sel.TextColor3 = Theme.SubText
+	label(row, o.Name, UDim2.new(0.5, -16, 1, 0), UDim2.fromOffset(16, 0), 15).Font = Enum.Font.GothamMedium
+	local sel = label(row, "", UDim2.new(0.4, -30, 1, 0), UDim2.new(0.5, 0, 0, 0), 14)
+	sel.TextXAlignment = Enum.TextXAlignment.Right; sel.TextColor3 = Theme.Accent
+	sel.Font = Enum.Font.GothamBold
 	local arrow = create("TextLabel", { Size = UDim2.fromOffset(24, ROW), Position = UDim2.new(1, -30, 0, 0),
-		BackgroundTransparency = 1, Text = "v", TextColor3 = Theme.Accent2,
+		BackgroundTransparency = 1, Text = "▾", TextColor3 = Theme.SubText,
 		Font = Enum.Font.GothamBold, TextSize = 14, Parent = row })
 	local header = clickArea(row, ROW)
 	local list = create("Frame", { Position = UDim2.fromOffset(0, ROW), Size = UDim2.new(1, 0, 0, 0),
 		BackgroundTransparency = 1, Parent = row })
-	create("UIListLayout", { Padding = UDim.new(0, 4), HorizontalAlignment = Enum.HorizontalAlignment.Center, Parent = list })
+	create("UIListLayout", { Padding = UDim.new(0, 6), HorizontalAlignment = Enum.HorizontalAlignment.Center, Parent = list })
 	local obj = {}; local buttons = {}
 	local function setOpen(v)
 		open = v
-		tween(row, 0.2, { Size = UDim2.new(1, 0, 0, v and (ROW + #options * 42 + 6) or ROW) }, Enum.EasingStyle.Quint)
+		tween(row, 0.2, { Size = UDim2.new(1, 0, 0, v and (ROW + #options * 46 + 8) or ROW) }, Enum.EasingStyle.Quint)
 		tween(arrow, 0.2, { Rotation = v and 180 or 0 })
 	end
 	local function select(opt, silent)
@@ -641,9 +714,9 @@ function Tab:AddDropdown(o)
 	local function build()
 		for _, b in pairs(buttons) do b:Destroy() end; table.clear(buttons)
 		for _, opt in ipairs(options) do
-			local b = create("TextButton", { Size = UDim2.new(1, -20, 0, 38), BackgroundColor3 = Theme.Hover,
+			local b = create("TextButton", { Size = UDim2.new(1, -16, 0, 40), BackgroundColor3 = Theme.Hover,
 				BorderSizePixel = 0, Text = tostring(opt), TextColor3 = Theme.Text,
-				Font = Enum.Font.GothamMedium, TextSize = 14, AutoButtonColor = false, Parent = list }, { corner(8) })
+				Font = Enum.Font.GothamMedium, TextSize = 14, AutoButtonColor = false, Parent = list }, { corner(10) })
 			b.MouseButton1Click:Connect(function() select(opt); setOpen(false) end)
 			buttons[opt] = b
 		end
@@ -664,11 +737,10 @@ function Tab:AddKeybind(o)
 	local key = o.Default or Enum.KeyCode.RightShift
 	local listening = false
 	local row = newRow(self.Page)
-	label(row, o.Name, UDim2.new(1, -110, 1, 0), UDim2.fromOffset(14, 0))
-	local badge = create("TextButton", { Size = UDim2.fromOffset(90, 30), Position = UDim2.new(1, -104, 0.5, -15),
-		BackgroundColor3 = Theme.Hover, BorderSizePixel = 0, Text = key.Name, TextColor3 = Theme.Text,
-		Font = Enum.Font.GothamBold, TextSize = 13, AutoButtonColor = false, Parent = row },
-		{ corner(8), stroke(Theme.Stroke, 0.5) })
+	label(row, o.Name, UDim2.new(1, -130, 1, 0), UDim2.fromOffset(16, 0), 15).Font = Enum.Font.GothamMedium
+	local badge = create("TextButton", { Size = UDim2.fromOffset(100, 36), Position = UDim2.new(1, -116, 0.5, -18),
+		BackgroundColor3 = Theme.Hover, BorderSizePixel = 0, Text = key.Name, TextColor3 = Theme.Accent,
+		Font = Enum.Font.GothamBold, TextSize = 13, AutoButtonColor = false, Parent = row }, { corner(10) })
 	local obj = {}
 	local function setLabel() badge.Text = listening and "..." or key.Name end
 	badge.MouseButton1Click:Connect(function()
@@ -700,26 +772,26 @@ function Tab:AddColorPicker(o)
 	local h, s, v = Color3.toHSV(color)
 	local open = false
 	local row = newRow(self.Page)
-	label(row, o.Name, UDim2.new(1, -60, 0, ROW), UDim2.fromOffset(14, 0))
-	local preview = create("Frame", { Size = UDim2.fromOffset(28, 28), Position = UDim2.new(1, -42, 0.5, -14),
-		BackgroundColor3 = color, BorderSizePixel = 0, Parent = row }, { corner(8), stroke(Color3.new(1, 1, 1), 0.6) })
+	label(row, o.Name, UDim2.new(1, -70, 1, 0), UDim2.fromOffset(16, 0), 15).Font = Enum.Font.GothamMedium
+	local preview = create("Frame", { Size = UDim2.fromOffset(36, 36), Position = UDim2.new(1, -52, 0.5, -18),
+		BackgroundColor3 = color, BorderSizePixel = 0, Parent = row }, { round() })
 	local header = clickArea(row, ROW)
 	local holder = create("Frame", { Position = UDim2.fromOffset(0, ROW), Size = UDim2.new(1, 0, 0, 0),
 		BackgroundTransparency = 1, ClipsDescendants = true, Parent = row })
-	local sv = create("Frame", { Size = UDim2.new(1, -28, 0, 100), Position = UDim2.fromOffset(14, 6),
-		BackgroundColor3 = Color3.fromHSV(h, 1, 1), BorderSizePixel = 0, Parent = holder }, { corner(8) })
+	local sv = create("Frame", { Size = UDim2.new(1, -32, 0, 110), Position = UDim2.fromOffset(16, 8),
+		BackgroundColor3 = Color3.fromHSV(h, 1, 1), BorderSizePixel = 0, Parent = holder }, { corner(10) })
 	local white = create("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1),
-		BorderSizePixel = 0, Parent = sv }, { corner(8) })
+		BorderSizePixel = 0, Parent = sv }, { corner(10) })
 	local wg = create("UIGradient", { Parent = white })
 	wg.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromHSV(h, 1, 1))
 	wg.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 1) })
 	local black = create("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0),
-		BorderSizePixel = 0, Parent = sv }, { corner(8) })
+		BorderSizePixel = 0, Parent = sv }, { corner(10) })
 	local bg = create("UIGradient", { Parent = black, Rotation = 90 })
 	bg.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 0) })
-	local marker = create("Frame", { Size = UDim2.fromOffset(14, 14), AnchorPoint = Vector2.new(0.5, 0.5),
+	local marker = create("Frame", { Size = UDim2.fromOffset(16, 16), AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.new(s, 0, 1 - v, 0), BackgroundTransparency = 1, Parent = sv }, { round(), stroke(Color3.new(1, 1, 1), 0, 2) })
-	local hue = create("Frame", { Size = UDim2.new(1, -28, 0, 14), Position = UDim2.fromOffset(14, 114),
+	local hue = create("Frame", { Size = UDim2.new(1, -32, 0, 16), Position = UDim2.fromOffset(16, 126),
 		BackgroundColor3 = Color3.fromRGB(255, 0, 0), BorderSizePixel = 0, Parent = holder }, { round() })
 	local hg = create("UIGradient", { Parent = hue })
 	hg.Color = ColorSequence.new({
@@ -731,7 +803,7 @@ function Tab:AddColorPicker(o)
 		ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 0, 255)),
 		ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 0, 0)),
 	})
-	local hM = create("Frame", { Size = UDim2.fromOffset(18, 18), AnchorPoint = Vector2.new(0.5, 0.5),
+	local hM = create("Frame", { Size = UDim2.fromOffset(20, 20), AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.new(h, 0, 0.5, 0), BackgroundColor3 = Color3.new(1, 1, 1),
 		BorderSizePixel = 0, Parent = hue }, { round(), stroke(Color3.new(0, 0, 0), 0.5, 2) })
 	local function apply(silent)
@@ -758,14 +830,12 @@ function Tab:AddColorPicker(o)
 	win:_connect(UIS.InputEnded, function(i) if isPointer(i) then dSV = false; dH = false end end)
 	header.MouseButton1Click:Connect(function()
 		open = not open
-		tween(row, 0.22, { Size = UDim2.new(1, 0, 0, open and (ROW + 140) or ROW) }, Enum.EasingStyle.Quint)
-		holder.Size = UDim2.new(1, 0, 0, open and 140 or 0)
+		tween(row, 0.22, { Size = UDim2.new(1, 0, 0, open and (ROW + 152) or ROW) }, Enum.EasingStyle.Quint)
+		holder.Size = UDim2.new(1, 0, 0, open and 152 or 0)
 	end)
 	local obj = {}
 	function obj:Get() return color end
-	function obj:Set(c, s2)
-		if typeof(c) == "Color3" then h, s, v = Color3.toHSV(c); apply(true) end
-	end
+	function obj:Set(c, s2) if typeof(c) == "Color3" then h, s, v = Color3.toHSV(c); apply(true) end end
 	apply(true); win:_register(o.Flag, obj, color)
 	return obj
 end
@@ -773,14 +843,14 @@ end
 function Tab:AddProgressBar(o)
 	local min, max = o.Min or 0, o.Max or 100
 	local value = o.Default or min
-	local row = newRow(self.Page, 60)
-	label(row, o.Name, UDim2.new(1, -90, 0, 26), UDim2.fromOffset(14, 6))
-	local vl = label(row, "", UDim2.new(0, 70, 0, 26), UDim2.new(1, -84, 0, 6))
-	vl.TextXAlignment = Enum.TextXAlignment.Right; vl.TextColor3 = Theme.SubText
-	local bar = create("Frame", { Size = UDim2.new(1, -28, 0, 10), Position = UDim2.fromOffset(14, 38),
+	local row = newRow(self.Page, 66)
+	label(row, o.Name, UDim2.new(1, -100, 0, 26), UDim2.fromOffset(16, 8), 15).Font = Enum.Font.GothamMedium
+	local vl = label(row, "", UDim2.new(0, 80, 0, 26), UDim2.new(1, -96, 0, 8), 14)
+	vl.TextXAlignment = Enum.TextXAlignment.Right; vl.TextColor3 = Theme.Accent; vl.Font = Enum.Font.GothamBold
+	local bar = create("Frame", { Size = UDim2.new(1, -32, 0, 10), Position = UDim2.fromOffset(16, 44),
 		BackgroundColor3 = Theme.Hover, BorderSizePixel = 0, Parent = row }, { round() })
-	local fill = create("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = Color3.new(1, 1, 1),
-		BorderSizePixel = 0, Parent = bar }, { round(), gradient(0) })
+	local fill = create("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = Theme.Accent,
+		BorderSizePixel = 0, Parent = bar }, { round() })
 	local obj = {}
 	local function set(v)
 		value = math.clamp(v, min, max)
@@ -799,16 +869,16 @@ function Tab:AddStepper(o)
 	local value = o.Default or min
 	local step = o.Increment or 1
 	local row = newRow(self.Page)
-	label(row, o.Name, UDim2.new(1, -160, 1, 0), UDim2.fromOffset(14, 0))
-	local minus = create("TextButton", { Size = UDim2.fromOffset(34, 34), Position = UDim2.new(1, -110, 0.5, -17),
+	label(row, o.Name, UDim2.new(1, -180, 1, 0), UDim2.fromOffset(16, 0), 15).Font = Enum.Font.GothamMedium
+	local minus = create("TextButton", { Size = UDim2.fromOffset(40, 40), Position = UDim2.new(1, -130, 0.5, -20),
 		BackgroundColor3 = Theme.Hover, BorderSizePixel = 0, Text = "−", TextColor3 = Theme.Text,
-		Font = Enum.Font.GothamBold, TextSize = 20, AutoButtonColor = false, Parent = row }, { corner(8) })
-	local vl = create("TextLabel", { Size = UDim2.fromOffset(40, 34), Position = UDim2.new(1, -70, 0.5, -17),
-		BackgroundTransparency = 1, Text = tostring(value), TextColor3 = Theme.Accent2,
-		Font = Enum.Font.GothamBold, TextSize = 14, Parent = row })
-	local plus = create("TextButton", { Size = UDim2.fromOffset(34, 34), Position = UDim2.new(1, -44, 0.5, -17),
+		Font = Enum.Font.GothamBold, TextSize = 22, AutoButtonColor = false, Parent = row }, { round() })
+	local vl = create("TextLabel", { Size = UDim2.fromOffset(48, 40), Position = UDim2.new(1, -86, 0.5, -20),
+		BackgroundTransparency = 1, Text = tostring(value), TextColor3 = Theme.Accent,
+		Font = Enum.Font.GothamBold, TextSize = 15, Parent = row })
+	local plus = create("TextButton", { Size = UDim2.fromOffset(40, 40), Position = UDim2.new(1, -52, 0.5, -20),
 		BackgroundColor3 = Theme.Hover, BorderSizePixel = 0, Text = "+", TextColor3 = Theme.Text,
-		Font = Enum.Font.GothamBold, TextSize = 20, AutoButtonColor = false, Parent = row }, { corner(8) })
+		Font = Enum.Font.GothamBold, TextSize = 22, AutoButtonColor = false, Parent = row }, { round() })
 	local obj = {}
 	local function set(v, s)
 		value = math.clamp(v, min, max); vl.Text = tostring(value)
@@ -828,11 +898,11 @@ function Tab:AddRadioGroup(o)
 	local current = o.Default or options[1]
 	local wrap = create("Frame", { Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
 		BackgroundColor3 = Theme.Element, BorderSizePixel = 0, Parent = self.Page },
-		{ corner(10), stroke(Theme.Stroke, 0.6),
-			create("UIPadding", { PaddingTop = UDim.new(0, 12), PaddingBottom = UDim.new(0, 12),
-				PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) }) })
-	label(wrap, o.Name, UDim2.new(1, 0, 0, 22), nil)
-	local holder = create("Frame", { Size = UDim2.new(1, 0, 0, 38), Position = UDim2.fromOffset(0, 26),
+		{ corner(14), create("UIPadding", { PaddingTop = UDim.new(0, 14), PaddingBottom = UDim.new(0, 14),
+			PaddingLeft = UDim.new(0, 16), PaddingRight = UDim.new(0, 16) }) })
+	local l = label(wrap, o.Name, UDim2.new(1, 0, 0, 22), nil, 14)
+	l.TextColor3 = Theme.SubText
+	local holder = create("Frame", { Size = UDim2.new(1, 0, 0, 42), Position = UDim2.fromOffset(0, 28),
 		BackgroundTransparency = 1, Parent = wrap })
 	create("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), Parent = holder })
 	local btns = {}
@@ -848,9 +918,9 @@ function Tab:AddRadioGroup(o)
 		if not s then safe(o.Callback, current) end
 	end
 	for _, opt in ipairs(options) do
-		local b = create("TextButton", { Size = UDim2.fromOffset(90, 34), BackgroundColor3 = Theme.Hover,
+		local b = create("TextButton", { Size = UDim2.fromOffset(96, 38), BackgroundColor3 = Theme.Hover,
 			BorderSizePixel = 0, Text = tostring(opt), TextColor3 = Theme.Text,
-			Font = Enum.Font.GothamMedium, TextSize = 13, AutoButtonColor = false, Parent = holder }, { corner(8) })
+			Font = Enum.Font.GothamMedium, TextSize = 13, AutoButtonColor = false, Parent = holder }, { round() })
 		b.MouseButton1Click:Connect(function() set(opt) end)
 		table.insert(btns, { Name = opt, Btn = b })
 	end
@@ -866,13 +936,13 @@ function Tab:AddMultiDropdown(o)
 	for _, v in ipairs(o.Default or {}) do selected[v] = true end
 	local open = false
 	local row = newRow(self.Page)
-	label(row, o.Name, UDim2.new(0.5, -14, 0, ROW), UDim2.fromOffset(14, 0))
-	local vl = label(row, "0 выбрано", UDim2.new(0.5, -14, 0, ROW), UDim2.new(0.5, 0, 0, 0))
-	vl.TextXAlignment = Enum.TextXAlignment.Right; vl.TextColor3 = Theme.SubText
+	label(row, o.Name, UDim2.new(0.5, -16, 1, 0), UDim2.fromOffset(16, 0), 15).Font = Enum.Font.GothamMedium
+	local vl = label(row, "0 выбрано", UDim2.new(0.4, -30, 1, 0), UDim2.new(0.5, 0, 0, 0), 14)
+	vl.TextXAlignment = Enum.TextXAlignment.Right; vl.TextColor3 = Theme.Accent; vl.Font = Enum.Font.GothamBold
 	local header = clickArea(row, ROW)
 	local holder = create("Frame", { Position = UDim2.fromOffset(0, ROW), Size = UDim2.new(1, 0, 0, 0),
 		BackgroundTransparency = 1, ClipsDescendants = true, Parent = row })
-	create("UIListLayout", { Padding = UDim.new(0, 4), HorizontalAlignment = Enum.HorizontalAlignment.Center, Parent = holder })
+	create("UIListLayout", { Padding = UDim.new(0, 6), HorizontalAlignment = Enum.HorizontalAlignment.Center, Parent = holder })
 	local btns = {}
 	local function getList()
 		local l = {}
@@ -886,9 +956,9 @@ function Tab:AddMultiDropdown(o)
 		vl.Text = #getList() .. " выбрано"
 	end
 	for _, opt in ipairs(options) do
-		local b = create("TextButton", { Size = UDim2.new(1, -20, 0, 38), BackgroundColor3 = Theme.Hover,
+		local b = create("TextButton", { Size = UDim2.new(1, -16, 0, 40), BackgroundColor3 = Theme.Hover,
 			BorderSizePixel = 0, Text = tostring(opt), TextColor3 = Theme.Text,
-			Font = Enum.Font.GothamMedium, TextSize = 14, AutoButtonColor = false, Parent = holder }, { corner(8) })
+			Font = Enum.Font.GothamMedium, TextSize = 14, AutoButtonColor = false, Parent = holder }, { corner(10) })
 		b.MouseButton1Click:Connect(function()
 			selected[opt] = not selected[opt] or nil; update()
 			if o.Flag then win.Flags[o.Flag] = getList() end
@@ -898,8 +968,8 @@ function Tab:AddMultiDropdown(o)
 	end
 	header.MouseButton1Click:Connect(function()
 		open = not open
-		tween(row, 0.2, { Size = UDim2.new(1, 0, 0, open and (ROW + #options * 42 + 6) or ROW) })
-		holder.Size = UDim2.new(1, 0, 0, open and (#options * 42 + 6) or 0)
+		tween(row, 0.2, { Size = UDim2.new(1, 0, 0, open and (ROW + #options * 46 + 8) or ROW) })
+		holder.Size = UDim2.new(1, 0, 0, open and (#options * 46 + 8) or 0)
 	end)
 	local obj = {}
 	function obj:Get() return getList() end
@@ -913,19 +983,19 @@ function Tab:AddMultiDropdown(o)
 end
 
 function Tab:AddDivider()
-	local wrap = create("Frame", { Size = UDim2.new(1, 0, 0, 9), BackgroundTransparency = 1, Parent = self.Page })
+	local wrap = create("Frame", { Size = UDim2.new(1, 0, 0, 12), BackgroundTransparency = 1, Parent = self.Page })
 	create("Frame", { Size = UDim2.new(1, 0, 0, 1), Position = UDim2.new(0, 0, 0.5, 0),
-		BackgroundColor3 = Theme.Stroke, BackgroundTransparency = 0.5, BorderSizePixel = 0, Parent = wrap })
+		BackgroundColor3 = Theme.Stroke, BackgroundTransparency = 0.4, BorderSizePixel = 0, Parent = wrap })
 end
 
 function Tab:AddLoader(o)
 	local row = newRow(self.Page)
-	local ring = create("Frame", { Size = UDim2.fromOffset(24, 24), Position = UDim2.fromOffset(14, 11),
+	local ring = create("Frame", { Size = UDim2.fromOffset(28, 28), Position = UDim2.fromOffset(16, 12),
 		BackgroundColor3 = Theme.Accent, BorderSizePixel = 0, Parent = row }, { round() })
-	create("Frame", { Size = UDim2.fromOffset(16, 16), AnchorPoint = Vector2.new(0.5, 0.5),
+	create("Frame", { Size = UDim2.fromOffset(18, 18), AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.5), BackgroundColor3 = Theme.Element,
 		BorderSizePixel = 0, Parent = ring }, { round() })
-	label(row, o.Name or "Загрузка...", UDim2.new(1, -50, 1, 0), UDim2.fromOffset(48, 0))
+	label(row, o.Name or "Загрузка...", UDim2.new(1, -60, 1, 0), UDim2.fromOffset(56, 0), 15).Font = Enum.Font.GothamMedium
 	local spinning = true
 	task.spawn(function()
 		while spinning and ring.Parent do ring.Rotation = (ring.Rotation + 8) % 360; RunService.Heartbeat:Wait() end
@@ -936,19 +1006,18 @@ end
 function Tab:AddParagraph(o)
 	local row = create("Frame", { Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
 		BackgroundColor3 = Theme.Element, BorderSizePixel = 0, Parent = self.Page },
-		{ corner(10), stroke(Theme.Stroke, 0.6),
-			create("UIPadding", { PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10),
-				PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 14) }) })
+		{ corner(14), create("UIPadding", { PaddingTop = UDim2.new(0, 14), PaddingBottom = UDim2.new(0, 14),
+			PaddingLeft = UDim.new(0, 16), PaddingRight = UDim.new(0, 16) }) })
 	local t = label(row, o.Title or "", UDim2.new(1, 0, 0, 0), nil, 15)
 	t.Font = Enum.Font.GothamBold; t.AutomaticSize = Enum.AutomaticSize.Y; t.TextWrapped = true
 	t.TextTruncate = Enum.TextTruncate.None
-	local c = label(row, o.Content or "", UDim2.new(1, 0, 0, 0), UDim2.fromOffset(0, 22), 13)
+	local c = label(row, o.Content or "", UDim2.new(1, 0, 0, 0), UDim2.fromOffset(0, 24), 13)
 	c.AutomaticSize = Enum.AutomaticSize.Y; c.TextWrapped = true; c.TextColor3 = Theme.SubText
 	c.TextTruncate = Enum.TextTruncate.None
 end
 
 -- ============================================================
--- THEMES: полный перекрас
+-- THEMES — полный перекрас
 -- ============================================================
 function Library:SetTheme(name)
 	local t = THEMES[name]; if not t then return end
@@ -997,39 +1066,45 @@ function Library:CloseAll()
 end
 
 -- ============================================================
--- AUTO-TABS (Темы / Игрок / О библиотеке)
+-- AUTO-TABS
 -- ============================================================
 function Library:AddAutoTabs(win)
 	-- Темы
 	local tabT = win:CreateTab("Темы")
-	tabT:AddSection("Тема")
-	tabT:AddDropdown({
-		Name = "Выбор темы", Options = Library:GetThemes(), Default = "Purple",
-		Callback = function(n) Library:SetTheme(n) end,
+	tabT:AddSection("Выбор темы")
+	local dd
+	dd = tabT:AddDropdown({
+		Name = "Тема", Options = Library:GetThemes(), Default = win.CurrentTheme or "Delta",
+		Callback = function(n)
+			Library:SetTheme(n)
+			win.CurrentTheme = n
+			win.Flags["__theme"] = n
+			win:Notify({ Title = "Тема", Text = n, Type = "info", Duration = 2 })
+		end,
 	})
 	tabT:AddSection("Инфо")
-	tabT:AddParagraph({ Title = "Темы", Content = "Всего тем: " .. #Library:GetThemes() .. "\nВыбор меняет все цвета окна." })
+	tabT:AddParagraph({ Title = "Темы", Content = "Всего тем: " .. #Library:GetThemes() .. "\nВыбор меняет все цвета окна, включая фон и текст." })
 
 	-- Игрок
 	local tabP = win:CreateTab("Игрок")
 	tabP:AddSection("Профиль")
-	local pInfo = create("Frame", { Size = UDim2.new(1, 0, 0, 100), BackgroundColor3 = Theme.Element,
-		BorderSizePixel = 0, Parent = tabP.Page }, { corner(10), stroke(Theme.Stroke, 0.6) })
-	local avatar = create("ImageLabel", { Size = UDim2.fromOffset(72, 72), Position = UDim2.fromOffset(14, 14),
-		BackgroundColor3 = Theme.Hover, BorderSizePixel = 0, Parent = pInfo }, { round(), stroke(Theme.Accent, 0.2, 2) })
+	local pInfo = create("Frame", { Size = UDim2.new(1, 0, 0, 110), BackgroundColor3 = Theme.Element,
+		BorderSizePixel = 0, Parent = tabP.Page }, { corner(14) })
+	local avatar = create("ImageLabel", { Size = UDim2.fromOffset(80, 80), Position = UDim2.fromOffset(16, 16),
+		BackgroundColor3 = Theme.Hover, BorderSizePixel = 0, Parent = pInfo }, { round() })
 	task.spawn(function()
 		local ok, url = pcall(function() return Players:GetUserThumbnailAsync(LP.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150) end)
 		if ok then avatar.Image = url end
 	end)
-	local nLbl = label(pInfo, LP.DisplayName, UDim2.new(1, -100, 0, 24), UDim2.fromOffset(100, 16), 18)
+	local nLbl = label(pInfo, LP.DisplayName, UDim2.new(1, -120, 0, 26), UDim2.fromOffset(110, 18), 18)
 	nLbl.Font = Enum.Font.GothamBold
-	label(pInfo, "@" .. LP.Name, UDim2.new(1, -100, 0, 18), UDim2.fromOffset(100, 42), 13).TextColor3 = Theme.SubText
-	label(pInfo, "ID: " .. LP.UserId, UDim2.new(1, -100, 0, 18), UDim2.fromOffset(100, 62), 12).TextColor3 = Theme.SubText
+	label(pInfo, "@" .. LP.Name, UDim2.new(1, -120, 0, 20), UDim2.fromOffset(110, 46), 14).TextColor3 = Theme.SubText
+	label(pInfo, "ID: " .. LP.UserId, UDim2.new(1, -120, 0, 20), UDim2.fromOffset(110, 68), 13).TextColor3 = Theme.SubText
 
-	tabP:AddSection("Живая статистика")
-	local statRow = create("Frame", { Size = UDim2.new(1, 0, 0, 140), BackgroundColor3 = Theme.Element,
-		BorderSizePixel = 0, Parent = tabP.Page }, { corner(10), stroke(Theme.Stroke, 0.6) })
-	local statLbl = label(statRow, "", UDim2.new(1, -20, 1, -20), UDim2.fromOffset(14, 10), 13)
+	tabP:AddSection("Статистика")
+	local statRow = create("Frame", { Size = UDim2.new(1, 0, 0, 150), BackgroundColor3 = Theme.Element,
+		BorderSizePixel = 0, Parent = tabP.Page }, { corner(14) })
+	local statLbl = label(statRow, "", UDim2.new(1, -32, 1, -24), UDim2.fromOffset(16, 12), 13)
 	statLbl.TextWrapped = true; statLbl.TextYAlignment = Enum.TextYAlignment.Top; statLbl.TextColor3 = Theme.SubText
 	task.spawn(function()
 		while statRow.Parent do
@@ -1043,7 +1118,7 @@ function Library:AddAutoTabs(win)
 			local ping = 0
 			pcall(function() ping = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue()) end)
 			statLbl.Text = string.format(
-				"❤ HP: %d / %d\n📍 Позиция: %.0f, %.0f, %.0f\n⚡ FPS: %d\n🌐 Пинг: %d мс\n👥 Игроков: %d",
+				"❤ HP: %d / %d\n📍 Позиция: %.0f, %.0f, %.0f\n⚡ FPS: %d\n🌐 Пинг: %d мс\n👥 Игроков онлайн: %d",
 				hp, maxhp, pos.X, pos.Y, pos.Z, fps, ping, #Players:GetPlayers()
 			)
 			task.wait(1)
@@ -1061,42 +1136,37 @@ function Library:AddAutoTabs(win)
 	})
 
 	-- О библиотеке
-	local tabA = win:CreateTab("О библиотеке")
-	tabA:AddSection("Инфо")
+	local tabA = win:CreateTab("Инфо")
+	tabA:AddSection("О библиотеке")
 	tabA:AddParagraph({ Title = "GuiLibMobile v" .. Library.Version,
-		Content = "Библиотека для GUI в Roblox executor'ах.\nЗаточена под телефон.\nАвтор: " .. Library.Brand })
+		Content = "GUI-библиотека для Roblox executor'ов.\nЗаточена под телефон.\nСтиль: Delta Executor." })
 	tabA:AddSection("Методы")
-	tabA:AddParagraph({ Title = "Всего методов:",
-		Content = "Button, Toggle, Slider, Textbox, Dropdown,\nKeybind, ColorPicker, ProgressBar,\nStepper, RadioGroup, MultiDropdown,\nDivider, Loader, Paragraph, Label,\nSection, SectionIcon, ThemeSelector" })
-	tabA:AddSection("Фишки")
-	tabA:AddParagraph({ Title = "Что умеет:",
-		Content = "• 12 полных тем (перекрашивают всё)\n• FAB-кнопка (плавающая)\n• ClickFX (круги на клик)\n• Toast (всплывашки снизу)\n• Notify (уведомления с иконкой)\n• NotifyWithButton (с кнопкой)\n• Config (save/load с Color3)\n• Watermark\n• PlayerList" })
-	tabA:AddSection("Watermark")
+	tabA:AddParagraph({ Title = "Элементы:",
+		Content = "Button, Toggle, Slider, Textbox, Dropdown,\nKeybind, ColorPicker, ProgressBar,\nStepper, RadioGroup, MultiDropdown,\nDivider, Loader, Paragraph, Label, Section" })
+	tabA:AddSection("Настройки")
 	tabA:AddToggle({
-		Name = "Показать Watermark", Default = false,
+		Name = "Watermark", Default = false,
 		Callback = function(v) Library:SetWatermark(win, v) end,
+	})
+	tabA:AddButton({
+		Name = "🗑 Закрыть всё",
+		Callback = function() Library:CloseAll() end,
 	})
 end
 
--- ============================================================
--- WATERMARK
--- ============================================================
 function Library:SetWatermark(win, visible)
 	if win._wm and win._wm.Parent then win._wm:Destroy(); win._wm = nil end
 	if not visible then return end
 	local wm = create("TextLabel", {
-		Size = UDim2.fromOffset(240, 28), Position = UDim2.new(1, -250, 0, 10),
+		Size = UDim2.fromOffset(260, 32), Position = UDim2.new(1, -272, 0, 12),
 		BackgroundColor3 = Theme.Topbar, BorderSizePixel = 0,
 		Text = "  ⚡ " .. Library.Brand .. " v" .. Library.Version .. "  |  " .. LP.Name,
 		TextColor3 = Theme.Text, Font = Enum.Font.GothamBold, TextSize = 11,
 		TextXAlignment = Enum.TextXAlignment.Left, Parent = win.Gui,
-	}, { round(), stroke(Theme.Accent, 0.4) })
+	}, { round() })
 	win._wm = wm
 end
 
--- ============================================================
--- CLICK FX + TOAST
--- ============================================================
 function Window:SetClickFx(cfg)
 	cfg = cfg or {}
 	if not cfg.Enabled then return end
@@ -1119,11 +1189,11 @@ end
 
 function Window:Toast(text, duration)
 	duration = duration or 2
-	local t = create("TextLabel", { Size = UDim2.new(0, 220, 0, 42), AnchorPoint = Vector2.new(0.5, 0),
+	local t = create("TextLabel", { Size = UDim2.new(0, 240, 0, 44), AnchorPoint = Vector2.new(0.5, 0),
 		Position = UDim2.new(0.5, 0, 1, 20), BackgroundColor3 = Theme.Topbar, BorderSizePixel = 0,
 		Text = text, TextColor3 = Theme.Text, Font = Enum.Font.GothamMedium, TextSize = 14, Parent = self.Gui },
-		{ round(), stroke(Theme.Accent, 0.4) })
-	tween(t, 0.3, { Position = UDim2.new(0.5, 0, 1, -60) }, Enum.EasingStyle.Back)
+		{ round() })
+	tween(t, 0.3, { Position = UDim2.new(0.5, 0, 1, -60) }, Enum.EasingStyle.Quint)
 	task.delay(duration, function()
 		tween(t, 0.25, { Position = UDim2.new(0.5, 0, 1, 20) }); task.wait(0.3); t:Destroy()
 	end)
@@ -1131,7 +1201,7 @@ end
 
 function Window:AddConfigTab(tab)
 	tab:AddSection("Конфиг")
-	tab:AddTextbox({ Name = "Имя", Default = self.ConfigName or "default",
+	tab:AddTextbox({ Name = "Имя конфига", Default = self.ConfigName or "default",
 		Placeholder = "my_config", Callback = function(n) self.ConfigName = n end })
 	tab:AddToggle({ Name = "Автосохранение", Default = false, Callback = function(v) self._autoSave = v end })
 	tab:AddButton({ Name = "💾 Сохранить", Callback = function()
