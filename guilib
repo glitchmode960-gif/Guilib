@@ -1,5 +1,5 @@
 --!nonstrict
--- GuiLib v7.0 — Delta Style, mobile-first
+-- GuiLib v8.0 — Fluent Glass Style, mobile-first (на базе v7.0)
 --
 -- Исправлено:  темы/CloseAll через реестр окон, ClickFx, LoadConfig с колбэками,
 --              тип уведомления "warn", ColorPicker на телефоне (скролл + GuiInset),
@@ -23,22 +23,25 @@ local LP = Players.LocalPlayer
 local Library = {}
 local Window = {}; Window.__index = Window
 local Tab = {}; Tab.__index = Tab
-Library.Version = "7.0"
+Library.Version = "8.0"
 Library.Brand = "GuiLib"
 Library._windows = {}
 
 local Theme = {
-	Background = Color3.fromRGB(22, 22, 26),
-	Topbar = Color3.fromRGB(28, 28, 34),
-	Element = Color3.fromRGB(36, 36, 44),
-	Hover = Color3.fromRGB(48, 48, 58),
-	Accent = Color3.fromRGB(0, 170, 255),
-	Text = Color3.fromRGB(240, 240, 245),
-	SubText = Color3.fromRGB(140, 140, 150),
+	Background = Color3.fromRGB(14, 58, 68),
+	Topbar = Color3.fromRGB(10, 44, 54),
+	Element = Color3.fromRGB(8, 38, 48),
+	Hover = Color3.fromRGB(22, 84, 96),
+	Accent = Color3.fromRGB(45, 205, 205),
+	Stroke = Color3.fromRGB(60, 190, 200),
+	Text = Color3.fromRGB(240, 248, 250),
+	SubText = Color3.fromRGB(150, 195, 202),
 	Success = Color3.fromRGB(80, 200, 120),
 	Error = Color3.fromRGB(235, 80, 90),
 	Warning = Color3.fromRGB(245, 180, 60),
 	Info = Color3.fromRGB(90, 150, 255),
+	GlassAlpha = 0.18, -- прозрачность окна
+	RowAlpha = 0.35,   -- прозрачность строк
 }
 Library.Theme = Theme
 
@@ -108,11 +111,17 @@ local function label(pa, tx, sz, po, ts)
 	})
 end
 
+local function stroke()
+	return create("UIStroke", {
+		Color = Theme.Stroke, Transparency = 0.72, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+	})
+end
+
 local function newRow(pa, h)
 	return create("Frame", {
-		Size = UDim2.new(1, 0, 0, h or ROW), BackgroundColor3 = Theme.Element,
+		Size = UDim2.new(1, 0, 0, h or ROW), BackgroundColor3 = Theme.Element, BackgroundTransparency = Theme.RowAlpha,
 		BorderSizePixel = 0, ClipsDescendants = true, Parent = pa,
-	}, { corner(12) })
+	}, { corner(6), stroke() })
 end
 
 local function ripple(row, input)
@@ -159,12 +168,39 @@ end
 ----------------------------------------------------------------
 -- WINDOW
 ----------------------------------------------------------------
+local function mkWinIcon(kind, btn)
+	local col = Theme.SubText
+	local function bar(rot)
+		return create("Frame", {
+			Size = UDim2.fromOffset(kind == "min" and 12 or 16, 2), AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5, 0.5), Rotation = rot, BackgroundColor3 = col, BorderSizePixel = 0, Parent = btn,
+		})
+	end
+	if kind == "min" then
+		bar(0)
+	elseif kind == "max" then
+		create("Frame", {
+			Size = UDim2.fromOffset(11, 11), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
+			BackgroundTransparency = 1, BorderSizePixel = 0, Parent = btn,
+		}, { create("UIStroke", { Color = col, Thickness = 1.5 }) })
+	else
+		bar(45); bar(-45)
+	end
+end
+
+local function tint(btn, c)
+	for _, d in ipairs(btn:GetDescendants()) do
+		if d:IsA("UIStroke") then d.Color = c
+		elseif d:IsA("Frame") and d.BackgroundTransparency < 1 then d.BackgroundColor3 = c end
+	end
+end
+
 function Library:CreateWindow(opts)
 	if type(opts) == "string" then opts = { Title = opts } end
 	opts = opts or {}
 	local self = setmetatable({}, Window)
 	self._conns, self._tabs, self._setters = {}, {}, {}
-	self.Flags = {}; self.Open = true; self.Minimized = false
+	self.Flags = {}; self.Open = true; self.Minimized = false; self.Maximized = false
 	self.ConfigName = opts.ConfigName or "default"
 	self.AutoSave = opts.AutoSave or false
 	self.ToggleKey = opts.ToggleKey or Enum.KeyCode.RightShift
@@ -173,9 +209,11 @@ function Library:CreateWindow(opts)
 	local cam = workspace.CurrentCamera
 	local function fullSize()
 		local v = cam.ViewportSize
-		return Vector2.new(math.min(600, v.X * 0.94), math.min(440, v.Y * 0.78))
+		if self.Maximized then return Vector2.new(v.X * 0.96, v.Y * 0.9) end
+		return Vector2.new(math.min(640, v.X * 0.94), math.min(440, v.Y * 0.78))
 	end
-	local function sbWidth() return math.clamp(math.floor(cam.ViewportSize.X * 0.28), 100, 160) end
+	local function sbWidth() return math.clamp(math.floor(cam.ViewportSize.X * 0.28), 100, 180) end
+	self._fullSize = fullSize
 	self._size = fullSize()
 
 	self.Gui = create("ScreenGui", {
@@ -189,55 +227,108 @@ function Library:CreateWindow(opts)
 	self.Main = create("CanvasGroup", {
 		Size = UDim2.fromOffset(self._size.X, self._size.Y),
 		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
-		BackgroundColor3 = Theme.Background, BorderSizePixel = 0, Parent = self.Gui,
-	}, { corner(18) })
+		BackgroundColor3 = Theme.Background, BackgroundTransparency = Theme.GlassAlpha,
+		BorderSizePixel = 0, Parent = self.Gui,
+	}, { corner(10) })
 	self.Scale = create("UIScale", { Parent = self.Main })
 
-	local header = create("Frame", {
-		Size = UDim2.new(1, 0, 0, 56), BackgroundColor3 = Theme.Topbar,
-		BorderSizePixel = 0, Parent = self.Main,
-	}, { corner(18) })
+	if opts.Background then -- Background = "rbxassetid://..." (картинка под стеклом)
+		create("ImageLabel", {
+			Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Image = opts.Background,
+			ImageTransparency = opts.BackgroundTransparency or 0.8, ScaleType = Enum.ScaleType.Crop, Parent = self.Main,
+		})
+	end
+	create("Frame", { -- рамка окна
+		Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 20, Parent = self.Main,
+	}, { corner(10), create("UIStroke", { Color = Theme.Stroke, Thickness = 2, Transparency = 0.4 }) })
+
+	-- шапка
+	local header = create("Frame", { Size = UDim2.new(1, 0, 0, 48), BackgroundTransparency = 1, Parent = self.Main })
 	create("Frame", {
-		Size = UDim2.new(1, 0, 0, 18), Position = UDim2.new(0, 0, 1, -18),
-		BackgroundColor3 = Theme.Topbar, BorderSizePixel = 0, Parent = header,
+		Size = UDim2.new(1, 0, 0, 1), Position = UDim2.new(0, 0, 1, -1), BackgroundColor3 = Theme.Stroke,
+		BackgroundTransparency = 0.55, BorderSizePixel = 0, Parent = header,
 	})
-
-	local tLbl = label(header, title, UDim2.new(1, -130, 0, 24), UDim2.fromOffset(20, opts.Subtitle and 8 or 16), 17)
-	tLbl.Font = Enum.Font.GothamBold
+	local th = create("Frame", {
+		Size = UDim2.new(1, -170, 1, 0), Position = UDim2.fromOffset(18, 0),
+		BackgroundTransparency = 1, ClipsDescendants = true, Parent = header,
+	})
+	create("UIListLayout", {
+		FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Center,
+		Padding = UDim.new(0, 10), Parent = th,
+	})
+	local tl = label(th, title, UDim2.fromOffset(0, 24), nil, 15)
+	tl.AutomaticSize = Enum.AutomaticSize.X; tl.TextTruncate = Enum.TextTruncate.None; tl.Font = Enum.Font.GothamMedium
 	if opts.Subtitle then
-		label(header, opts.Subtitle, UDim2.new(1, -130, 0, 16), UDim2.fromOffset(20, 32), 12).TextColor3 = Theme.SubText
+		local sl = label(th, opts.Subtitle, UDim2.fromOffset(0, 20), nil, 12)
+		sl.AutomaticSize = Enum.AutomaticSize.X; sl.TextTruncate = Enum.TextTruncate.None; sl.TextColor3 = Theme.SubText
 	end
 
-	local function hBtn(t, x, cb)
+	local function winBtn(kind, x, cb, hoverColor)
 		local b = create("TextButton", {
-			Size = UDim2.fromOffset(44, 44), Position = UDim2.new(1, x, 0.5, -22),
-			BackgroundColor3 = Theme.Element, Text = t, TextColor3 = Theme.SubText,
-			Font = Enum.Font.GothamBold, TextSize = 16, AutoButtonColor = false, Parent = header,
-		}, { corner(12) })
-		b.MouseEnter:Connect(function() tween(b, 0.15, { BackgroundColor3 = Theme.Hover, TextColor3 = Theme.Text }) end)
-		b.MouseLeave:Connect(function() tween(b, 0.15, { BackgroundColor3 = Theme.Element, TextColor3 = Theme.SubText }) end)
+			Size = UDim2.fromOffset(44, 40), Position = UDim2.new(1, x, 0, 4),
+			BackgroundColor3 = hoverColor or Theme.Hover, BackgroundTransparency = 1,
+			Text = "", AutoButtonColor = false, Parent = header,
+		}, { corner(8) })
+		mkWinIcon(kind, b)
+		b.MouseEnter:Connect(function() tween(b, 0.12, { BackgroundTransparency = 0.3 }); tint(b, Theme.Text) end)
+		b.MouseLeave:Connect(function() tween(b, 0.12, { BackgroundTransparency = 1 }); tint(b, Theme.SubText) end)
 		b.MouseButton1Click:Connect(cb)
-		return b
 	end
-	hBtn("−", -108, function() self:SetMinimized(not self.Minimized) end)
-	hBtn("✕", -56, function() self:Destroy() end)
+	winBtn("min", -146, function() self:SetMinimized(not self.Minimized) end)
+	winBtn("max", -98, function() self:SetMaximized(not self.Maximized) end)
+	winBtn("close", -50, function() self:Destroy() end, Theme.Error)
 
 	self.Body = create("Frame", {
-		Size = UDim2.new(1, 0, 1, -56), Position = UDim2.fromOffset(0, 56),
-		BackgroundTransparency = 1, Parent = self.Main,
+		Size = UDim2.new(1, 0, 1, -48), Position = UDim2.fromOffset(0, 48), BackgroundTransparency = 1, Parent = self.Main,
 	})
 
+	-- сайдбар: профиль, поиск, вкладки
 	local sw = sbWidth()
-	self.Sidebar = create("Frame", {
-		Size = UDim2.new(0, sw, 1, 0), BackgroundColor3 = Theme.Topbar,
-		BorderSizePixel = 0, Parent = self.Body,
+	self.Sidebar = create("Frame", { Size = UDim2.new(0, sw, 1, 0), BackgroundTransparency = 1, Parent = self.Body })
+
+	local prof = create("Frame", {
+		Size = UDim2.new(1, -16, 0, 60), Position = UDim2.fromOffset(8, 8), BackgroundColor3 = Theme.Element,
+		BackgroundTransparency = Theme.RowAlpha, BorderSizePixel = 0, ClipsDescendants = true, Parent = self.Sidebar,
+	}, { corner(8), stroke() })
+	local av = create("ImageLabel", {
+		Size = UDim2.fromOffset(40, 40), Position = UDim2.fromOffset(10, 10),
+		BackgroundColor3 = Theme.Hover, BorderSizePixel = 0, Parent = prof,
+	}, { corner(10) })
+	task.spawn(function()
+		local ok, url = pcall(function()
+			return Players:GetUserThumbnailAsync(LP.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
+		end)
+		if ok and av.Parent then av.Image = url end
+	end)
+	label(prof, LP.DisplayName, UDim2.new(1, -62, 0, 18), UDim2.fromOffset(58, 11), 13).Font = Enum.Font.GothamMedium
+	label(prof, opts.UserTitle or "User", UDim2.new(1, -62, 0, 16), UDim2.fromOffset(58, 31), 11).TextColor3 = Theme.SubText
+
+	local sbox = create("Frame", {
+		Size = UDim2.new(1, -16, 0, 38), Position = UDim2.fromOffset(8, 76), BackgroundColor3 = Theme.Element,
+		BackgroundTransparency = Theme.RowAlpha, BorderSizePixel = 0, Parent = self.Sidebar,
+	}, { corner(8), stroke() })
+	create("Frame", { -- лупа: кольцо + ручка
+		Size = UDim2.fromOffset(11, 11), Position = UDim2.fromOffset(12, 12), BackgroundTransparency = 1,
+		BorderSizePixel = 0, Parent = sbox,
+	}, { round(), create("UIStroke", { Color = Theme.SubText, Thickness = 1.5 }) })
+	create("Frame", {
+		Size = UDim2.fromOffset(6, 2), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(24, 24),
+		Rotation = 45, BackgroundColor3 = Theme.SubText, BorderSizePixel = 0, Parent = sbox,
 	})
+	local searchBox = create("TextBox", {
+		Size = UDim2.new(1, -42, 1, 0), Position = UDim2.fromOffset(34, 0), BackgroundTransparency = 1,
+		Text = "", PlaceholderText = "Search...", PlaceholderColor3 = Theme.SubText, TextColor3 = Theme.Text,
+		Font = Enum.Font.Gotham, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left,
+		ClearTextOnFocus = false, Parent = sbox,
+	})
+	searchBox:GetPropertyChangedSignal("Text"):Connect(function() self:Search(searchBox.Text) end)
+
 	local sb = create("ScrollingFrame", {
-		Size = UDim2.new(1, -16, 1, -16), Position = UDim2.fromOffset(8, 8),
+		Size = UDim2.new(1, -16, 1, -130), Position = UDim2.fromOffset(8, 122),
 		BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 0,
 		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, Parent = self.Sidebar,
 	})
-	create("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder, Parent = sb })
+	create("UIListLayout", { Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder, Parent = sb })
 	self._sbList = sb
 
 	self.Pages = create("Frame", {
@@ -253,20 +344,17 @@ function Library:CreateWindow(opts)
 	create("UIListLayout", { Padding = UDim.new(0, 10), HorizontalAlignment = Enum.HorizontalAlignment.Center, Parent = self.Notes })
 
 	self.Fab = create("TextButton", {
-		Size = UDim2.fromOffset(56, 56), Position = UDim2.new(0, 16, 0.45, 0),
-		BackgroundColor3 = Theme.Topbar, Text = title:sub(1, 1):upper(),
-		TextColor3 = Theme.Text, Font = Enum.Font.GothamBold, TextSize = 24,
-		AutoButtonColor = false, Parent = self.Gui,
-	}, { round() })
+		Size = UDim2.fromOffset(52, 52), Position = UDim2.new(0, 16, 0.45, 0),
+		BackgroundColor3 = Theme.Topbar, BackgroundTransparency = 0.15, Text = title:sub(1, 1):upper(),
+		TextColor3 = Theme.Accent, Font = Enum.Font.GothamBold, TextSize = 22, AutoButtonColor = false, Parent = self.Gui,
+	}, { corner(14), stroke() })
 
-	-- привязка Fab к краю экрана после перетаскивания
 	local function snapFab()
 		local v, f = cam.ViewportSize, self.Fab
 		local tx = (f.AbsolutePosition.X + f.AbsoluteSize.X / 2 < v.X / 2) and 12 or (v.X - f.AbsoluteSize.X - 12)
 		local ty = math.clamp(f.AbsolutePosition.Y, 12, v.Y - f.AbsoluteSize.Y - 12)
 		tween(f, 0.25, { Position = UDim2.fromOffset(tx, ty) }, Enum.EasingStyle.Quint)
 	end
-	-- окно не должно уезжать за экран
 	local function clampMain()
 		local v, m = cam.ViewportSize, self.Main
 		local c = m.AbsolutePosition + m.AbsoluteSize / 2
@@ -283,7 +371,7 @@ function Library:CreateWindow(opts)
 
 	self:_connect(cam:GetPropertyChangedSignal("ViewportSize"), function()
 		self._size = fullSize()
-		self.Main.Size = UDim2.fromOffset(self._size.X, self.Minimized and 56 or self._size.Y)
+		self.Main.Size = UDim2.fromOffset(self._size.X, self.Minimized and 48 or self._size.Y)
 		self.Notes.Size = UDim2.fromOffset(math.min(340, cam.ViewportSize.X * 0.9), 400)
 		local w = sbWidth()
 		self.Sidebar.Size = UDim2.new(0, w, 1, 0)
@@ -295,6 +383,15 @@ function Library:CreateWindow(opts)
 	tween(self.Main, 0.25, { GroupTransparency = 0 })
 	tween(self.Scale, 0.28, { Scale = 1 }, Enum.EasingStyle.Quint)
 	return self
+end
+
+function Window:SetMaximized(v)
+	self.Maximized = v
+	self.Minimized = false
+	self._size = self._fullSize()
+	tween(self.Main, 0.28, {
+		Size = UDim2.fromOffset(self._size.X, self._size.Y), Position = UDim2.fromScale(0.5, 0.5),
+	}, Enum.EasingStyle.Quint)
 end
 
 function Window:_connect(sig, fn) local c = sig:Connect(fn); table.insert(self._conns, c); return c end
@@ -339,7 +436,7 @@ end
 
 function Window:SetMinimized(v)
 	self.Minimized = v
-	tween(self.Main, 0.25, { Size = UDim2.fromOffset(self._size.X, v and 56 or self._size.Y) }, Enum.EasingStyle.Quint)
+	tween(self.Main, 0.25, { Size = UDim2.fromOffset(self._size.X, v and 48 or self._size.Y) }, Enum.EasingStyle.Quint)
 end
 
 function Window:Destroy()
@@ -352,46 +449,88 @@ end
 function Window:SelectTab(tab)
 	for _, t in ipairs(self._tabs) do
 		local on = t == tab
-		if on and not t.Page.Visible then
-			t.Page.Position = UDim2.fromOffset(0, 14)
-			tween(t.Page, 0.22, { Position = UDim2.fromOffset(0, 0) }, Enum.EasingStyle.Quint)
+		if on and not t.Container.Visible then
+			t.Container.Position = UDim2.fromOffset(0, 14)
+			tween(t.Container, 0.22, { Position = UDim2.fromOffset(0, 0) }, Enum.EasingStyle.Quint)
 		end
-		t.Page.Visible = on
+		t.Container.Visible = on
 		tween(t.Button, 0.18, {
-			BackgroundColor3 = on and Theme.Element or Theme.Topbar,
+			BackgroundTransparency = on and 0.5 or 1,
 			TextColor3 = on and Theme.Text or Theme.SubText,
 		})
 		tween(t.Indicator, 0.18, { BackgroundTransparency = on and 0 or 1 })
+		if t.Icon then tween(t.Icon, 0.18, { ImageColor3 = on and Theme.Accent or Theme.SubText }) end
 	end
+	self._current = tab
 end
 
-function Window:CreateTab(name)
+-- поиск по названиям вкладок и элементов
+function Window:Search(query)
+	query = string.lower(query or "")
+	local first
+	for _, t in ipairs(self._tabs) do
+		local tabMatch = query == "" or string.find(string.lower(t.Name), query, 1, true) ~= nil
+		local any = tabMatch
+		for _, row in ipairs(t.Page:GetChildren()) do
+			if row:IsA("GuiObject") then
+				local match = tabMatch
+				if not match then
+					local l = row:IsA("TextLabel") and row or row:FindFirstChildWhichIsA("TextLabel", true)
+					match = l ~= nil and string.find(string.lower(l.Text), query, 1, true) ~= nil
+				end
+				row.Visible = match
+				if match then any = true end
+			end
+		end
+		t.Button.Visible = any
+		if any and not first then first = t end
+	end
+	if self._current and not self._current.Button.Visible and first then self:SelectTab(first) end
+end
+
+-- CreateTab(name, icon): icon — необязательный "rbxassetid://..."
+function Window:CreateTab(name, icon)
+	local padL = icon and 42 or 16
 	local button = create("TextButton", {
-		Size = UDim2.new(1, 0, 0, 44), BackgroundColor3 = Theme.Topbar,
-		BorderSizePixel = 0, Text = name, TextColor3 = Theme.SubText,
-		Font = Enum.Font.GothamMedium, TextSize = 14, TextTruncate = Enum.TextTruncate.AtEnd,
-		TextXAlignment = Enum.TextXAlignment.Left, AutoButtonColor = false,
-		LayoutOrder = #self._tabs, Parent = self._sbList,
-	}, { corner(10), create("UIPadding", { PaddingLeft = UDim.new(0, 16), PaddingRight = UDim.new(0, 6) }) })
+		Size = UDim2.new(1, 0, 0, 44), BackgroundColor3 = Theme.Hover, BackgroundTransparency = 1,
+		BorderSizePixel = 0, Text = name, TextColor3 = Theme.SubText, Font = Enum.Font.GothamMedium,
+		TextSize = 14, TextTruncate = Enum.TextTruncate.AtEnd, TextXAlignment = Enum.TextXAlignment.Left,
+		AutoButtonColor = false, LayoutOrder = #self._tabs, Parent = self._sbList,
+	}, { corner(8), create("UIPadding", { PaddingLeft = UDim.new(0, padL), PaddingRight = UDim.new(0, 6) }) })
 
 	local indicator = create("Frame", {
-		Size = UDim2.fromOffset(3, 20), Position = UDim2.new(0, -12, 0.5, -10),
+		Size = UDim2.fromOffset(3, 20), Position = UDim2.new(0, 4 - padL, 0.5, -10),
 		BackgroundColor3 = Theme.Accent, BackgroundTransparency = 1, BorderSizePixel = 0, Parent = button,
 	}, { round() })
 
-	local page = create("ScrollingFrame", {
-		Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0,
-		ScrollBarThickness = 3, ScrollBarImageColor3 = Theme.Accent,
-		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y,
-		Visible = false, Parent = self.Pages,
+	local iconLabel
+	if icon then
+		iconLabel = create("ImageLabel", {
+			Size = UDim2.fromOffset(20, 20), Position = UDim2.new(0, 14 - padL, 0.5, -10),
+			BackgroundTransparency = 1, Image = icon, ImageColor3 = Theme.SubText, Parent = button,
+		})
+	end
+
+	local container = create("Frame", {
+		Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Visible = false, Parent = self.Pages,
 	})
-	create("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder, Parent = page })
+	label(container, name, UDim2.new(1, -32, 0, 44), UDim2.fromOffset(18, 2), 24).Font = Enum.Font.GothamMedium
+
+	local page = create("ScrollingFrame", {
+		Size = UDim2.new(1, 0, 1, -50), Position = UDim2.fromOffset(0, 50), BackgroundTransparency = 1,
+		BorderSizePixel = 0, ScrollBarThickness = 3, ScrollBarImageColor3 = Theme.Accent,
+		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, Parent = container,
+	})
+	create("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder, Parent = page })
 	create("UIPadding", {
-		PaddingTop = UDim.new(0, 12), PaddingBottom = UDim.new(0, 16),
+		PaddingTop = UDim.new(0, 4), PaddingBottom = UDim.new(0, 16),
 		PaddingLeft = UDim.new(0, 16), PaddingRight = UDim.new(0, 16), Parent = page,
 	})
 
-	local tab = setmetatable({ Window = self, Page = page, Button = button, Indicator = indicator, Name = name }, Tab)
+	local tab = setmetatable({
+		Window = self, Page = page, Container = container, Button = button,
+		Indicator = indicator, Icon = iconLabel, Name = name,
+	}, Tab)
 	table.insert(self._tabs, tab)
 	button.MouseButton1Click:Connect(function() self:SelectTab(tab) end)
 	if #self._tabs == 1 then self:SelectTab(tab) end
@@ -506,7 +645,7 @@ function Window:Dialog(cfg)
 			BackgroundColor3 = bc.Primary and Theme.Accent or Theme.Hover, BorderSizePixel = 0,
 			Text = bc.Text or "OK", TextColor3 = bc.Primary and Color3.new(1, 1, 1) or Theme.Text,
 			Font = Enum.Font.GothamBold, TextSize = 14, AutoButtonColor = false, LayoutOrder = idx, Parent = rowB,
-		}, { corner(12) })
+		}, { corner(8) })
 		b.MouseButton1Click:Connect(function() close(); safe(bc.Callback) end)
 	end
 
@@ -587,8 +726,8 @@ end
 -- ЭЛЕМЕНТЫ
 ----------------------------------------------------------------
 function Tab:AddSection(text)
-	local l = label(self.Page, text or "Section", UDim2.new(1, 0, 0, 26), UDim2.fromOffset(4, 4), 15)
-	l.Font = Enum.Font.GothamBold
+	local l = label(self.Page, text or "Section", UDim2.new(1, 0, 0, 30), UDim2.fromOffset(4, 6), 18)
+	l.Font = Enum.Font.GothamMedium
 end
 
 function Tab:AddSectionInfo(title, subtitle)
@@ -605,8 +744,8 @@ end
 function Tab:AddLabel(text)
 	local row = create("Frame", {
 		Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
-		BackgroundColor3 = Theme.Element, BorderSizePixel = 0, Parent = self.Page,
-	}, { corner(12), pad(14, 14, 16, 16) })
+		BackgroundColor3 = Theme.Element, BackgroundTransparency = Theme.RowAlpha, BorderSizePixel = 0, Parent = self.Page,
+	}, { corner(8), pad(14, 14, 16, 16) })
 	local l = label(row, text, UDim2.new(1, 0, 0, 0))
 	l.AutomaticSize = Enum.AutomaticSize.Y; l.TextWrapped = true
 	l.TextTruncate = Enum.TextTruncate.None; l.TextColor3 = Theme.SubText
@@ -616,8 +755,8 @@ end
 function Tab:AddParagraph(o)
 	local row = create("Frame", {
 		Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
-		BackgroundColor3 = Theme.Element, BorderSizePixel = 0, Parent = self.Page,
-	}, { corner(12), pad(14, 14, 16, 16) })
+		BackgroundColor3 = Theme.Element, BackgroundTransparency = Theme.RowAlpha, BorderSizePixel = 0, Parent = self.Page,
+	}, { corner(8), pad(14, 14, 16, 16) })
 	create("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder, Parent = row })
 	local t = label(row, o.Title or "", UDim2.new(1, 0, 0, 0), nil, 15)
 	t.Font = Enum.Font.GothamBold; t.AutomaticSize = Enum.AutomaticSize.Y; t.TextWrapped = true
@@ -636,9 +775,15 @@ function Tab:AddDivider()
 end
 
 function Tab:AddButton(o)
-	local row = newRow(self.Page)
-	local l = label(row, o.Name or "Button", UDim2.new(1, -32, 1, 0), UDim2.fromOffset(16, 0), 15)
-	l.Font = Enum.Font.GothamMedium
+	local desc = o.Description
+	local h = desc and 68 or ROW
+	local row = newRow(self.Page, h)
+	label(row, o.Name or "Button", UDim2.new(1, -56, 0, desc and 24 or h), UDim2.fromOffset(16, desc and 12 or 0), 15).Font = Enum.Font.GothamMedium
+	if desc then label(row, desc, UDim2.new(1, -56, 0, 20), UDim2.fromOffset(16, 38), 12).TextColor3 = Theme.SubText end
+	create("TextLabel", {
+		Size = UDim2.fromOffset(24, h), Position = UDim2.new(1, -34, 0, 0), BackgroundTransparency = 1,
+		Text = "›", TextColor3 = Theme.SubText, Font = Enum.Font.GothamBold, TextSize = 26, Parent = row,
+	})
 	clickArea(row).MouseButton1Click:Connect(function() safe(o.Callback) end)
 	return row
 end
@@ -646,8 +791,10 @@ end
 function Tab:AddToggle(o)
 	local win = self.Window
 	local state = o.Default or false
-	local row = newRow(self.Page)
-	label(row, o.Name, UDim2.new(1, -90, 1, 0), UDim2.fromOffset(16, 0), 15).Font = Enum.Font.GothamMedium
+	local desc = o.Description
+	local row = newRow(self.Page, desc and 68 or ROW)
+	label(row, o.Name, UDim2.new(1, -90, 0, desc and 24 or ROW), UDim2.fromOffset(16, desc and 12 or 0), 15).Font = Enum.Font.GothamMedium
+	if desc then label(row, desc, UDim2.new(1, -90, 0, 20), UDim2.fromOffset(16, 38), 12).TextColor3 = Theme.SubText end
 	local sw = create("Frame", {
 		Size = UDim2.fromOffset(52, 30), Position = UDim2.new(1, -68, 0.5, -15),
 		BackgroundColor3 = state and Theme.Accent or Theme.Hover, BorderSizePixel = 0, Parent = row,
@@ -853,8 +1000,8 @@ function Tab:AddRadioGroup(o)
 	local current = o.Default or options[1]
 	local wrap = create("Frame", {
 		Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
-		BackgroundColor3 = Theme.Element, BorderSizePixel = 0, Parent = self.Page,
-	}, { corner(12), pad(14, 14, 16, 16) })
+		BackgroundColor3 = Theme.Element, BackgroundTransparency = Theme.RowAlpha, BorderSizePixel = 0, Parent = self.Page,
+	}, { corner(8), pad(14, 14, 16, 16) })
 	label(wrap, o.Name or "Radio", UDim2.new(1, 0, 0, 22), nil, 14).TextColor3 = Theme.SubText
 	local holder = create("Frame", {
 		Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
@@ -1123,12 +1270,18 @@ end
 ----------------------------------------------------------------
 -- ТЕМЫ
 ----------------------------------------------------------------
-local THEME_KEYS = { "Background", "Topbar", "Element", "Hover", "Accent" }
+local THEME_KEYS = { "Background", "Topbar", "Element", "Hover", "Accent", "Stroke" }
 local THEMES = {
 	-- полные темы (меняют поверхности)
+	Fluent = {
+		Background = Color3.fromRGB(14, 58, 68), Topbar = Color3.fromRGB(10, 44, 54),
+		Element = Color3.fromRGB(8, 38, 48), Hover = Color3.fromRGB(22, 84, 96),
+		Accent = Color3.fromRGB(45, 205, 205), Stroke = Color3.fromRGB(60, 190, 200),
+	},
 	Delta = {
 		Background = Color3.fromRGB(22, 22, 26), Topbar = Color3.fromRGB(28, 28, 34),
-		Element = Color3.fromRGB(36, 36, 44), Hover = Color3.fromRGB(48, 48, 58), Accent = Color3.fromRGB(0, 170, 255),
+		Element = Color3.fromRGB(36, 36, 44), Hover = Color3.fromRGB(48, 48, 58),
+		Accent = Color3.fromRGB(0, 170, 255), Stroke = Color3.fromRGB(70, 70, 95),
 	},
 	Amoled = {
 		Background = Color3.fromRGB(0, 0, 0), Topbar = Color3.fromRGB(12, 12, 14),
@@ -1296,7 +1449,7 @@ function Library:AddAutoTabs(win)
 	local tabT = win:CreateTab("Темы")
 	tabT:AddSectionInfo("Персонализация", "Тема и цвет акцента")
 	tabT:AddDropdown({
-		Name = "Тема", Options = Library:GetThemes(), Default = "Delta", Flag = "_theme",
+		Name = "Тема", Options = Library:GetThemes(), Default = "Fluent", Flag = "_theme",
 		Callback = function(n)
 			Library:SetTheme(n)
 			win:Notify({ Title = "Тема", Text = n, Type = "info", Duration = 2 })
@@ -1307,8 +1460,8 @@ function Library:AddAutoTabs(win)
 	local tabP = win:CreateTab("Игрок")
 	tabP:AddSectionInfo("Профиль", "Информация о тебе")
 	local card = create("Frame", {
-		Size = UDim2.new(1, 0, 0, 110), BackgroundColor3 = Theme.Element, BorderSizePixel = 0, Parent = tabP.Page,
-	}, { corner(12) })
+		Size = UDim2.new(1, 0, 0, 110), BackgroundColor3 = Theme.Element, BackgroundTransparency = Theme.RowAlpha, BorderSizePixel = 0, Parent = tabP.Page,
+	}, { corner(8) })
 	local avatar = create("ImageLabel", {
 		Size = UDim2.fromOffset(80, 80), Position = UDim2.fromOffset(16, 15),
 		BackgroundColor3 = Theme.Hover, BorderSizePixel = 0, Parent = card,
@@ -1327,8 +1480,8 @@ function Library:AddAutoTabs(win)
 
 	tabP:AddSectionInfo("Статистика", "Живые данные")
 	local statCard = create("Frame", {
-		Size = UDim2.new(1, 0, 0, 150), BackgroundColor3 = Theme.Element, BorderSizePixel = 0, Parent = tabP.Page,
-	}, { corner(12) })
+		Size = UDim2.new(1, 0, 0, 150), BackgroundColor3 = Theme.Element, BackgroundTransparency = Theme.RowAlpha, BorderSizePixel = 0, Parent = tabP.Page,
+	}, { corner(8) })
 	local statLbl = label(statCard, "", UDim2.new(1, -32, 1, -24), UDim2.fromOffset(16, 12), 13)
 	statLbl.TextWrapped = true; statLbl.TextYAlignment = Enum.TextYAlignment.Top; statLbl.TextColor3 = Theme.SubText
 	statLbl.TextTruncate = Enum.TextTruncate.None
