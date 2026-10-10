@@ -1,5 +1,5 @@
 --!nonstrict
--- GuiLib v9.0 — Fluent Glass, компактный + готовый функционал (на базе v8.0)
+-- GuiLib v9.1 — Fluent Glass, компактный + функционал; починены темы, watermark, ошибки
 --
 -- Исправлено:  темы/CloseAll через реестр окон, ClickFx, LoadConfig с колбэками,
 --              тип уведомления "warn", ColorPicker на телефоне (скролл + GuiInset),
@@ -23,7 +23,7 @@ local LP = Players.LocalPlayer
 local Library = {}
 local Window = {}; Window.__index = Window
 local Tab = {}; Tab.__index = Tab
-Library.Version = "9.0"
+Library.Version = "9.1"
 Library.Brand = "GuiLib"
 Library._windows = {}
 
@@ -110,6 +110,11 @@ local function label(pa, tx, sz, po, ts)
 		TextColor3 = Theme.Text, Font = Enum.Font.Gotham, TextSize = math.max(10, (ts or 15) - 2),
 		TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = pa,
 	})
+end
+
+local function firstChar(s)
+	local ok, ch = pcall(function() return utf8.char(utf8.codepoint(s, 1)) end)
+	return ok and string.upper(ch) or "G"
 end
 
 local function stroke()
@@ -346,7 +351,7 @@ function Library:CreateWindow(opts)
 
 	self.Fab = create("TextButton", {
 		Size = UDim2.fromOffset(44, 44), Position = UDim2.new(0, 16, 0.45, 0),
-		BackgroundColor3 = Theme.Topbar, BackgroundTransparency = 0.15, Text = title:sub(1, 1):upper(),
+		BackgroundColor3 = Theme.Topbar, BackgroundTransparency = 0.15, Text = firstChar(title),
 		TextColor3 = Theme.Accent, Font = Enum.Font.GothamBold, TextSize = 22, AutoButtonColor = false, Parent = self.Gui,
 	}, { corner(14), stroke() })
 
@@ -1273,8 +1278,22 @@ end
 -- ТЕМЫ
 ----------------------------------------------------------------
 local THEME_KEYS = { "Background", "Topbar", "Element", "Hover", "Accent", "Stroke" }
+
+-- палитра из одного цвета: тёмные поверхности, тонированные в его оттенок
+local function paletteFrom(accent)
+	local h, s = Color3.toHSV(accent)
+	s = math.clamp(s, 0.35, 0.85)
+	return {
+		Background = Color3.fromHSV(h, s * 0.75, 0.26),
+		Topbar = Color3.fromHSV(h, s * 0.80, 0.19),
+		Element = Color3.fromHSV(h, s * 0.85, 0.15),
+		Hover = Color3.fromHSV(h, s * 0.70, 0.36),
+		Accent = accent,
+		Stroke = accent:Lerp(Color3.new(1, 1, 1), 0.12), -- отличается от Accent, чтобы цвета не склеивались
+	}
+end
+
 local THEMES = {
-	-- полные темы (меняют поверхности)
 	Fluent = {
 		Background = Color3.fromRGB(14, 58, 68), Topbar = Color3.fromRGB(10, 44, 54),
 		Element = Color3.fromRGB(8, 38, 48), Hover = Color3.fromRGB(22, 84, 96),
@@ -1288,26 +1307,33 @@ local THEMES = {
 	Amoled = {
 		Background = Color3.fromRGB(0, 0, 0), Topbar = Color3.fromRGB(12, 12, 14),
 		Element = Color3.fromRGB(22, 22, 26), Hover = Color3.fromRGB(38, 38, 44),
+		Accent = Color3.fromRGB(0, 200, 255), Stroke = Color3.fromRGB(55, 55, 66),
 	},
 	Midnight = {
 		Background = Color3.fromRGB(14, 16, 28), Topbar = Color3.fromRGB(20, 23, 40),
-		Element = Color3.fromRGB(28, 32, 54), Hover = Color3.fromRGB(40, 46, 76), Accent = Color3.fromRGB(110, 130, 255),
+		Element = Color3.fromRGB(28, 32, 54), Hover = Color3.fromRGB(40, 46, 76),
+		Accent = Color3.fromRGB(110, 130, 255), Stroke = Color3.fromRGB(90, 105, 210),
 	},
-	-- акцентные темы (меняют только акцент)
-	Blue = { Accent = Color3.fromRGB(70, 120, 255) },
-	Red = { Accent = Color3.fromRGB(235, 70, 90) },
-	Green = { Accent = Color3.fromRGB(70, 200, 120) },
-	Gold = { Accent = Color3.fromRGB(230, 180, 60) },
-	Cyan = { Accent = Color3.fromRGB(60, 200, 230) },
-	Pink = { Accent = Color3.fromRGB(255, 100, 200) },
-	Orange = { Accent = Color3.fromRGB(255, 150, 60) },
-	Purple = { Accent = Color3.fromRGB(140, 90, 255) },
-	Lime = { Accent = Color3.fromRGB(170, 230, 60) },
-	Rose = { Accent = Color3.fromRGB(255, 110, 150) },
-	Mint = { Accent = Color3.fromRGB(60, 220, 180) },
-	Violet = { Accent = Color3.fromRGB(180, 80, 255) },
-	Grey = { Accent = Color3.fromRGB(150, 150, 160) },
 }
+local THEME_ORDER = { "Fluent", "Delta", "Amoled", "Midnight" }
+
+local ACCENTS = {
+	Blue = Color3.fromRGB(70, 120, 255), Red = Color3.fromRGB(235, 70, 90),
+	Green = Color3.fromRGB(70, 200, 120), Gold = Color3.fromRGB(230, 180, 60),
+	Cyan = Color3.fromRGB(60, 200, 230), Pink = Color3.fromRGB(255, 100, 200),
+	Orange = Color3.fromRGB(255, 150, 60), Purple = Color3.fromRGB(140, 90, 255),
+	Lime = Color3.fromRGB(170, 230, 60), Rose = Color3.fromRGB(255, 110, 150),
+	Mint = Color3.fromRGB(60, 220, 180), Violet = Color3.fromRGB(180, 80, 255),
+}
+do
+	local names = {}
+	for name, color in pairs(ACCENTS) do
+		THEMES[name] = paletteFrom(color)
+		table.insert(names, name)
+	end
+	table.sort(names)
+	for _, n in ipairs(names) do table.insert(THEME_ORDER, n) end
+end
 
 local function recolor(root, map)
 	for _, obj in ipairs(root:GetDescendants()) do
@@ -1318,6 +1344,9 @@ local function recolor(root, map)
 				end
 				if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
 					local n = map[obj.TextColor3:ToHex()]; if n then obj.TextColor3 = n end
+				end
+				if obj:IsA("ImageLabel") then
+					local n = map[obj.ImageColor3:ToHex()]; if n then obj.ImageColor3 = n end
 				end
 				if obj:IsA("ScrollingFrame") then
 					local n = map[obj.ScrollBarImageColor3:ToHex()]; if n then obj.ScrollBarImageColor3 = n end
@@ -1339,22 +1368,29 @@ local function recolor(root, map)
 	end
 end
 
-function Library:SetTheme(name)
-	local t = THEMES[name]; if not t then return end
+-- применяет палитру ко всем открытым окнам и к новым элементам
+function Library:ApplyPalette(pal)
 	local map = {}
 	for _, k in ipairs(THEME_KEYS) do
-		local new = t[k]
+		local new = pal[k]
 		if new and new ~= Theme[k] then map[Theme[k]:ToHex()] = new end
 	end
-	for _, k in ipairs(THEME_KEYS) do if t[k] then Theme[k] = t[k] end end
+	for _, k in ipairs(THEME_KEYS) do if pal[k] then Theme[k] = pal[k] end end
 	for _, w in ipairs(Library._windows) do recolor(w.Gui, map) end
 end
 
+function Library:SetTheme(name)
+	local pal = THEMES[name]
+	if pal then Library:ApplyPalette(pal) end
+end
+
+-- своя тема из одного цвета акцента
+function Library:SetAccent(color)
+	if typeof(color) == "Color3" then Library:ApplyPalette(paletteFrom(color)) end
+end
+
 function Library:GetThemes()
-	local l = {}
-	for k in pairs(THEMES) do table.insert(l, k) end
-	table.sort(l)
-	return l
+	return table.clone(THEME_ORDER)
 end
 
 function Library:CloseAll()
@@ -1392,10 +1428,10 @@ function Library:SetWatermark(win, visible)
 	if win._wm then win._wm:Destroy(); win._wm = nil end
 	if not visible then return end
 	local wm = create("TextLabel", {
-		Size = UDim2.fromOffset(0, 34), AutomaticSize = Enum.AutomaticSize.X, AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -12, 0, GuiService:GetGuiInset().Y + 6), BackgroundColor3 = Theme.Topbar,
+		Size = UDim2.fromOffset(0, 26), AutomaticSize = Enum.AutomaticSize.X, AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -10, 0, 6), BackgroundColor3 = Theme.Topbar,
 		BorderSizePixel = 0, Text = Library.Brand, TextColor3 = Theme.Text, Font = Enum.Font.GothamBold,
-		TextSize = 12, Parent = win.Gui,
+		TextSize = 11, Parent = win.Gui,
 	}, { round(), create("UIPadding", { PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 14) }) })
 	win._wm = wm
 	local frames, acc = 0, 0
@@ -1446,46 +1482,40 @@ function Window:AddConfigTab(tab)
 	refresh()
 end
 
-function Library:AddAutoTabs(win)
-	Library:AddFeatureTabs(win)
-	-- Темы
-	local tabT = win:CreateTab("Темы")
-	tabT:AddSectionInfo("Персонализация", "Тема и цвет акцента")
-	tabT:AddDropdown({
-		Name = "Тема", Options = Library:GetThemes(), Default = "Fluent", Flag = "_theme",
-		Callback = function(n)
-			Library:SetTheme(n)
-			win:Notify({ Title = "Тема", Text = n, Type = "info", Duration = 2 })
-		end,
-	})
+function Library:AddAutoTabs(win, opts)
+	opts = opts or {}
+	-- функционал (Движение / Визуал / Прочее); отключить: AddAutoTabs(win, { Features = false })
+	if opts.Features ~= false then Library:AddFeatureTabs(win) end
 
-	-- Игрок
-	local tabP = win:CreateTab("Игрок")
+	-- Профиль
+	local tabP = win:CreateTab("Профиль")
 	tabP:AddSectionInfo("Профиль", "Информация о тебе")
 	local card = create("Frame", {
-		Size = UDim2.new(1, 0, 0, 110), BackgroundColor3 = Theme.Element, BackgroundTransparency = Theme.RowAlpha, BorderSizePixel = 0, Parent = tabP.Page,
+		Size = UDim2.new(1, 0, 0, 90), BackgroundColor3 = Theme.Element, BackgroundTransparency = Theme.RowAlpha,
+		BorderSizePixel = 0, Parent = tabP.Page,
 	}, { corner(8) })
 	local avatar = create("ImageLabel", {
-		Size = UDim2.fromOffset(80, 80), Position = UDim2.fromOffset(16, 15),
+		Size = UDim2.fromOffset(66, 66), Position = UDim2.fromOffset(12, 12),
 		BackgroundColor3 = Theme.Hover, BorderSizePixel = 0, Parent = card,
 	}, { round() })
 	local function loadAvatar()
 		local ok, url = pcall(function()
 			return Players:GetUserThumbnailAsync(LP.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
 		end)
-		if ok then avatar.Image = url end
+		if ok and avatar.Parent then avatar.Image = url end
 		return ok
 	end
 	task.spawn(loadAvatar)
-	label(card, LP.DisplayName, UDim2.new(1, -120, 0, 26), UDim2.fromOffset(110, 16), 18).Font = Enum.Font.GothamBold
-	label(card, "@" .. LP.Name, UDim2.new(1, -120, 0, 20), UDim2.fromOffset(110, 44), 14).TextColor3 = Theme.SubText
-	label(card, "ID: " .. LP.UserId, UDim2.new(1, -120, 0, 20), UDim2.fromOffset(110, 66), 13).TextColor3 = Theme.SubText
+	label(card, LP.DisplayName, UDim2.new(1, -100, 0, 24), UDim2.fromOffset(90, 14), 17).Font = Enum.Font.GothamBold
+	label(card, "@" .. LP.Name, UDim2.new(1, -100, 0, 18), UDim2.fromOffset(90, 40), 13).TextColor3 = Theme.SubText
+	label(card, "ID: " .. LP.UserId, UDim2.new(1, -100, 0, 18), UDim2.fromOffset(90, 60), 12).TextColor3 = Theme.SubText
 
 	tabP:AddSectionInfo("Статистика", "Живые данные")
 	local statCard = create("Frame", {
-		Size = UDim2.new(1, 0, 0, 150), BackgroundColor3 = Theme.Element, BackgroundTransparency = Theme.RowAlpha, BorderSizePixel = 0, Parent = tabP.Page,
+		Size = UDim2.new(1, 0, 0, 112), BackgroundColor3 = Theme.Element, BackgroundTransparency = Theme.RowAlpha,
+		BorderSizePixel = 0, Parent = tabP.Page,
 	}, { corner(8) })
-	local statLbl = label(statCard, "", UDim2.new(1, -32, 1, -24), UDim2.fromOffset(16, 12), 13)
+	local statLbl = label(statCard, "", UDim2.new(1, -24, 1, -20), UDim2.fromOffset(12, 10), 13)
 	statLbl.TextWrapped = true; statLbl.TextYAlignment = Enum.TextYAlignment.Top; statLbl.TextColor3 = Theme.SubText
 	statLbl.TextTruncate = Enum.TextTruncate.None
 	task.spawn(function()
@@ -1498,7 +1528,7 @@ function Library:AddAutoTabs(win)
 			local ping = 0
 			pcall(function() ping = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue()) end)
 			statLbl.Text = string.format(
-				"HP: %d / %d\nПозиция: %.0f, %.0f, %.0f\nFPS: %d\nПинг: %d мс\nИгроков онлайн: %d",
+				"HP: %d / %d\nПозиция: %.0f, %.0f, %.0f\nFPS: %d   Пинг: %d мс\nИгроков онлайн: %d",
 				hum and hum.Health or 0, hum and hum.MaxHealth or 100, pos.X, pos.Y, pos.Z, fps, ping, #Players:GetPlayers())
 			task.wait(1)
 		end
@@ -1506,33 +1536,38 @@ function Library:AddAutoTabs(win)
 	tabP:AddButton({ Name = "Обновить профиль", Callback = function()
 		local ok = loadAvatar()
 		win:Notify({ Title = ok and "Успех" or "Ошибка", Text = ok and "Профиль обновлён" or "Не удалось загрузить аватар",
-			Type = ok and "success" or "error" })
+			Type = ok and "success" or "error", Duration = 2 })
 	end })
 
-	-- Конфиг
-	win:AddConfigTab(win:CreateTab("Конфиг"))
-
-	-- Инфо
-	local tabA = win:CreateTab("Инфо")
-	tabA:AddSectionInfo("GuiLib", "v" .. Library.Version)
-	tabA:AddParagraph({
-		Title = "О библиотеке",
-		Content = "Минималистичная GUI-библиотека.\nЗаточена под телефон и ПК.\nСтиль: Delta Executor.",
+	-- Темы
+	local tabT = win:CreateTab("Темы")
+	tabT:AddSection("Тема")
+	tabT:AddDropdown({
+		Name = "Готовая тема", Options = Library:GetThemes(), Default = "Fluent", Flag = "_theme",
+		Callback = function(n) Library:SetTheme(n) end,
 	})
-	tabA:AddSectionInfo("Настройки", "Дополнительно")
-	tabA:AddToggle({ Name = "Watermark", Default = false, Callback = function(v) Library:SetWatermark(win, v) end })
-	tabA:AddToggle({ Name = "Эффект касания", Default = false, Callback = function(v) win:SetClickFx({ Enabled = v }) end })
-	tabA:AddButton({ Name = "Закрыть всё", Callback = function()
-		win:Dialog({
-			Title = "Закрыть всё?", Text = "Все окна GuiLib будут закрыты.",
-			Buttons = {
-				{ Text = "Отмена" },
-				{ Text = "Закрыть", Primary = true, Callback = function() Library:CloseAll() end },
-			},
-		})
-	end })
+	local token = 0
+	tabT:AddColorPicker({
+		Name = "Свой цвет акцента", Default = Theme.Accent, Flag = "_accent",
+		Callback = function(c)
+			token += 1
+			local my = token
+			task.delay(0.12, function() if my == token then Library:SetAccent(c) end end) -- без лагов при перетаскивании
+		end,
+	})
+	tabT:AddSection("Интерфейс")
+	tabT:AddSlider({
+		Name = "Прозрачность окна", Min = 0, Max = 80, Default = math.floor(Theme.GlassAlpha * 100), Suffix = "%", Flag = "_glass",
+		Callback = function(v)
+			Theme.GlassAlpha = v / 100
+			for _, w in ipairs(Library._windows) do w.Main.BackgroundTransparency = Theme.GlassAlpha end
+		end,
+	})
+	tabT:AddToggle({ Name = "Watermark", Description = "Ник и FPS сверху справа", Flag = "_watermark",
+		Callback = function(v) Library:SetWatermark(win, v) end })
+	tabT:AddToggle({ Name = "Эффект касания", Flag = "_clickfx",
+		Callback = function(v) win:SetClickFx({ Enabled = v }) end })
 end
-
 
 ----------------------------------------------------------------
 -- ФУНКЦИОНАЛ: клиентские утилиты (движение, визуал, прочее)
@@ -1823,7 +1858,13 @@ function Library:AddFeatureTabs(win)
 	tv:AddToggle({ Name = "Скрывать свою команду", Flag = "espTeam",
 		Callback = function(v) esp.team = v; refreshESP() end })
 	tv:AddColorPicker({ Name = "Цвет ESP", Default = esp.color, Flag = "espColor",
-		Callback = function(c) esp.color = c; refreshESP() end })
+		Callback = function(c)
+			esp.color = c
+			for _, o in pairs(espObjs) do
+				if o.hl then o.hl.FillColor = c end
+				if o.label then o.label.TextColor3 = c end
+			end
+		end })
 
 	----------------------------------------------------------------
 	-- ПРОЧЕЕ
@@ -1838,7 +1879,7 @@ function Library:AddFeatureTabs(win)
 	end
 	local tpTarget
 	local tpDrop = tz:AddDropdown({ Name = "Игрок", Options = playerNames(), Callback = function(n) tpTarget = n end })
-	local function refreshNames() tpDrop:Refresh(playerNames()) end
+	local function refreshNames() if win.Gui.Parent then tpDrop:Refresh(playerNames()) end end
 	win:_connect(Players.PlayerAdded, function() task.delay(0.5, refreshNames) end)
 	win:_connect(Players.PlayerRemoving, function() task.delay(0.5, refreshNames) end)
 	tz:AddButton({ Name = "Телепорт к игроку", Callback = function()
