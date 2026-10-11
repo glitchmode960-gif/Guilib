@@ -1,5 +1,5 @@
 --!nonstrict
--- GuiLib v9.1 — Fluent Glass, компактный + функционал; починены темы, watermark, ошибки
+-- GuiLib v10.0 — Fluent Glass: звуки, анимации, профили конфигов, геометрия окна, горячие клавиши, тултипы
 --
 -- Исправлено:  темы/CloseAll через реестр окон, ClickFx, LoadConfig с колбэками,
 --              тип уведомления "warn", ColorPicker на телефоне (скролл + GuiInset),
@@ -23,7 +23,7 @@ local LP = Players.LocalPlayer
 local Library = {}
 local Window = {}; Window.__index = Window
 local Tab = {}; Tab.__index = Tab
-Library.Version = "9.1"
+Library.Version = "10.0"
 Library.Brand = "GuiLib"
 Library._windows = {}
 
@@ -130,30 +130,236 @@ local function newRow(pa, h)
 	}, { corner(6), stroke() })
 end
 
+----------------------------------------------------------------
+-- ЗВУКИ (ID можно заменить: Library.Sounds.Click = "rbxassetid://...")
+----------------------------------------------------------------
+local SoundService = game:GetService("SoundService")
+local ContentProvider = game:GetService("ContentProvider")
+
+Library.SoundEnabled = true
+Library.SoundVolume = 0.5
+Library.Sounds = {
+	Hover = "rbxassetid://119354387183704",
+	Click = "rbxassetid://6042053626",
+	ToggleOn = "rbxassetid://140207837688369",
+	ToggleOff = "rbxassetid://139009780109934",
+	Open = "rbxassetid://78897892629188",
+	Close = "rbxassetid://78299875784295",
+	Notify = "rbxassetid://117653664939966",
+}
+local soundObjs, lastPlay = {}, {}
+
+local function getSound(name)
+	local s = soundObjs[name]
+	if s and s.Parent then return s end
+	local id = Library.Sounds[name]
+	if not id then return nil end
+	s = Instance.new("Sound")
+	s.Name = "GuiLib_" .. name
+	s.SoundId = id
+	s.Volume = Library.SoundVolume
+	s.Parent = SoundService
+	soundObjs[name] = s
+	return s
+end
+
+function Library:PlaySound(name)
+	if not Library.SoundEnabled or Library._mute then return end
+	local now = os.clock()
+	if lastPlay[name] and now - lastPlay[name] < (name == "Hover" and 0.08 or 0.03) then return end
+	lastPlay[name] = now
+	local s = getSound(name)
+	if not s then return end
+	s.Volume = Library.SoundVolume * (name == "Hover" and 0.6 or 1)
+	s.TimePosition = 0
+	s:Play()
+end
+
+function Library:SetSoundsEnabled(on) Library.SoundEnabled = on and true or false end
+function Library:SetSoundVolume(v) Library.SoundVolume = math.clamp(tonumber(v) or 0.5, 0, 1) end
+
+local function preloadSounds()
+	local list = {}
+	for name in pairs(Library.Sounds) do
+		local s = getSound(name)
+		if s then table.insert(list, s) end
+	end
+	task.spawn(function() pcall(function() ContentProvider:PreloadAsync(list) end) end)
+end
+
+local function destroySounds()
+	for k, s in pairs(soundObjs) do s:Destroy(); soundObjs[k] = nil end
+end
+
+----------------------------------------------------------------
+-- ТУЛТИПЫ
+----------------------------------------------------------------
+local activeTip
+
+local function hideTip()
+	if activeTip then
+		activeTip.conn:Disconnect()
+		activeTip.frame:Destroy()
+		activeTip = nil
+	end
+end
+
+local function showTip(gui, text, fixedPos)
+	hideTip()
+	local f = create("Frame", {
+		Size = UDim2.fromOffset(0, 0), AutomaticSize = Enum.AutomaticSize.XY, BackgroundColor3 = Theme.Topbar,
+		BackgroundTransparency = 0.05, BorderSizePixel = 0, ZIndex = 200, Parent = gui,
+	}, { corner(6), stroke(), pad(6, 6, 10, 10), create("UISizeConstraint", { MaxSize = Vector2.new(280, 400) }) })
+	create("TextLabel", {
+		Size = UDim2.fromOffset(0, 0), AutomaticSize = Enum.AutomaticSize.XY, BackgroundTransparency = 1,
+		Text = text, TextColor3 = Theme.Text, Font = Enum.Font.Gotham, TextSize = 12, TextWrapped = true,
+		TextXAlignment = Enum.TextXAlignment.Left, Parent = f,
+	})
+	local function place()
+		local p = fixedPos or UIS:GetMouseLocation()
+		local v = workspace.CurrentCamera.ViewportSize
+		local x = math.clamp(p.X + 14, 6, math.max(6, v.X - f.AbsoluteSize.X - 6))
+		local y = math.clamp(p.Y + 18, 6, math.max(6, v.Y - f.AbsoluteSize.Y - 6))
+		f.Position = UDim2.fromOffset(x, y)
+	end
+	place()
+	activeTip = { frame = f, conn = RunService.RenderStepped:Connect(place) }
+end
+
+local function attachTip(obj, text)
+	if not text then return end
+	local tok = 0
+	obj.MouseEnter:Connect(function()
+		tok += 1
+		local my = tok
+		task.delay(0.45, function()
+			if my == tok and obj.Parent then
+				local g = obj:FindFirstAncestorWhichIsA("ScreenGui")
+				if g then showTip(g, text) end
+			end
+		end)
+	end)
+	obj.MouseLeave:Connect(function() tok += 1; hideTip() end)
+end
+
+----------------------------------------------------------------
+-- RIPPLE / КЛИК / HOVER
+----------------------------------------------------------------
 local function ripple(row, input)
 	local x = input.Position.X - row.AbsolutePosition.X
 	local c = create("Frame", {
 		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, x, 0, math.min(row.AbsoluteSize.Y, ROW) / 2),
 		Size = UDim2.fromOffset(0, 0), BackgroundColor3 = Color3.new(1, 1, 1),
-		BackgroundTransparency = 0.88, BorderSizePixel = 0, ZIndex = 2, Parent = row,
+		BackgroundTransparency = 0.85, BorderSizePixel = 0, ZIndex = 2, Parent = row,
 	}, { round() })
 	local d = math.max(row.AbsoluteSize.X, 80) * 1.6
 	tween(c, 0.5, { Size = UDim2.fromOffset(d, d), BackgroundTransparency = 1 })
 	task.delay(0.55, function() c:Destroy() end)
 end
 
-local function clickArea(row, h)
+-- общая «строка-кнопка»: hover-звук и подсветка, ripple, звук клика,
+-- тултип (мышь: наведение 0.45с, тач: удержание), OnHold (мышь: удержание 0.8с)
+local function clickArea(row, h, o)
+	o = o or {}
 	local b = create("TextButton", {
 		Size = h and UDim2.new(1, 0, 0, h) or UDim2.fromScale(1, 1),
 		BackgroundTransparency = 1, Text = "", AutoButtonColor = false, Parent = row,
 	})
-	b.InputBegan:Connect(function(i)
-		if isPointer(i) then ripple(row, i); tween(row, 0.1, { BackgroundColor3 = Theme.Hover }) end
+	local hoverTok, holdTok, held = 0, 0, false
+	b.MouseEnter:Connect(function()
+		Library:PlaySound("Hover")
+		tween(row, 0.12, { BackgroundTransparency = math.max(0, Theme.RowAlpha - 0.12) })
+		if o.Tooltip then
+			hoverTok += 1
+			local my = hoverTok
+			task.delay(0.45, function()
+				if my == hoverTok and b.Parent then
+					local g = b:FindFirstAncestorWhichIsA("ScreenGui")
+					if g then showTip(g, o.Tooltip) end
+				end
+			end)
+		end
 	end)
-	b.InputEnded:Connect(function(i)
-		if isPointer(i) then tween(row, 0.2, { BackgroundColor3 = Theme.Element }) end
+	b.MouseLeave:Connect(function()
+		hoverTok += 1
+		hideTip()
+		tween(row, 0.15, { BackgroundTransparency = Theme.RowAlpha })
+	end)
+	b.InputBegan:Connect(function(i)
+		if not isPointer(i) then return end
+		b:SetAttribute("Suppress", nil)
+		ripple(row, i)
+		tween(row, 0.1, { BackgroundColor3 = Theme.Hover })
+		if not o.NoClick then Library:PlaySound("Click") end
+		held = true
+		holdTok += 1
+		local my = holdTok
+		local touch = i.UserInputType == Enum.UserInputType.Touch
+		if touch and o.Tooltip then
+			task.delay(0.45, function()
+				if my == holdTok and held then
+					local g = b:FindFirstAncestorWhichIsA("ScreenGui")
+					if g then showTip(g, o.Tooltip, screenPos(i)) end
+				end
+			end)
+		end
+		if not touch and o.OnHold then
+			task.delay(0.8, function()
+				if my == holdTok and held then
+					b:SetAttribute("Suppress", true) -- не считать отпускание кликом
+					o.OnHold()
+				end
+			end)
+		end
+		i.Changed:Connect(function()
+			if i.UserInputState == Enum.UserInputState.End then
+				held = false
+				holdTok += 1
+				tween(row, 0.2, { BackgroundColor3 = Theme.Element })
+				if touch then hideTip() end
+			end
+		end)
 	end)
 	return b
+end
+
+local function onClick(btn, fn)
+	btn.MouseButton1Click:Connect(function()
+		if btn:GetAttribute("Suppress") then btn:SetAttribute("Suppress", nil); return end
+		fn()
+	end)
+end
+
+-- hover/click/ripple для мелких кнопок (степпер, пункты списков, бейдж клавиши)
+local function fx(btn, target, quiet)
+	btn.MouseEnter:Connect(function() Library:PlaySound("Hover") end)
+	btn.InputBegan:Connect(function(i)
+		if isPointer(i) then
+			if target then ripple(target, i) end
+			if not quiet then Library:PlaySound("Click") end
+		end
+	end)
+end
+
+-- плавное «докручивание» числа: st = { val = число }, fn(x) отрисовывает значение
+local function animNumber(st, to, dur, fn)
+	st.tok = (st.tok or 0) + 1
+	local my, from, t0 = st.tok, st.val or 0, os.clock()
+	task.spawn(function()
+		while st.tok == my do
+			local a = math.clamp((os.clock() - t0) / dur, 0, 1)
+			st.val = from + (to - from) * (1 - (1 - a) ^ 3)
+			fn(st.val)
+			if a >= 1 then break end
+			RunService.RenderStepped:Wait()
+		end
+	end)
+end
+
+local function snapNumber(st, v, fn)
+	st.tok = (st.tok or 0) + 1
+	st.val = v
+	fn(v)
 end
 
 local function encodeV(v)
@@ -205,13 +411,19 @@ function Library:CreateWindow(opts)
 	if type(opts) == "string" then opts = { Title = opts } end
 	opts = opts or {}
 	local self = setmetatable({}, Window)
-	self._conns, self._tabs, self._setters = {}, {}, {}
+	self._conns, self._tabs, self._setters, self._hotkeys, self._groups = {}, {}, {}, {}, {}
 	self.Flags = {}; self.Open = true; self.Minimized = false; self.Maximized = false
+	self.UserScale = 1; self._locked = false
 	self.ConfigName = opts.ConfigName or "default"
 	self.AutoSave = opts.AutoSave or false
 	self.ToggleKey = opts.ToggleKey or Enum.KeyCode.RightShift
+	self.SaveGeometryEnabled = opts.SaveGeometry ~= false
 
 	local title = opts.Title or "Window"
+	local safeTitle = (tostring(title):gsub("[^%w_]", "_"))
+	self._geoFile = "GuiLib_win_" .. safeTitle .. ".json"
+	self._autoFile = "GuiLib_auto_" .. safeTitle .. ".txt"
+
 	local cam = workspace.CurrentCamera
 	local function fullSize()
 		local v = cam.ViewportSize
@@ -244,13 +456,14 @@ function Library:CreateWindow(opts)
 			ImageTransparency = opts.BackgroundTransparency or 0.8, ScaleType = Enum.ScaleType.Crop, Parent = self.Main,
 		})
 	end
+	self.BorderStroke = create("UIStroke", { Color = Theme.Stroke, Thickness = 2, Transparency = 0.4 })
 	create("Frame", { -- рамка окна
 		Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 20, Parent = self.Main,
-	}, { corner(10), create("UIStroke", { Color = Theme.Stroke, Thickness = 2, Transparency = 0.4 }) })
+	}, { corner(10), self.BorderStroke })
 
 	-- шапка
 	local header = create("Frame", { Size = UDim2.new(1, 0, 0, 40), BackgroundTransparency = 1, Parent = self.Main })
-	create("Frame", {
+	self.HeaderLine = create("Frame", {
 		Size = UDim2.new(1, 0, 0, 1), Position = UDim2.new(0, 0, 1, -1), BackgroundColor3 = Theme.Stroke,
 		BackgroundTransparency = 0.55, BorderSizePixel = 0, Parent = header,
 	})
@@ -276,13 +489,14 @@ function Library:CreateWindow(opts)
 			Text = "", AutoButtonColor = false, Parent = header,
 		}, { corner(8) })
 		mkWinIcon(kind, b)
+		fx(b, nil, true)
 		b.MouseEnter:Connect(function() tween(b, 0.12, { BackgroundTransparency = 0.3 }); tint(b, Theme.Text) end)
 		b.MouseLeave:Connect(function() tween(b, 0.12, { BackgroundTransparency = 1 }); tint(b, Theme.SubText) end)
-		b.MouseButton1Click:Connect(cb)
+		b.MouseButton1Click:Connect(function() Library:PlaySound("Click"); cb() end)
 	end
 	winBtn("min", -118, function() self:SetMinimized(not self.Minimized) end)
 	winBtn("max", -80, function() self:SetMaximized(not self.Maximized) end)
-	winBtn("close", -42, function() self:Destroy() end, Theme.Error)
+	winBtn("close", -42, function() Library:PlaySound("Close"); self:Destroy() end, Theme.Error)
 
 	self.Body = create("Frame", {
 		Size = UDim2.new(1, 0, 1, -40), Position = UDim2.fromOffset(0, 40), BackgroundTransparency = 1, Parent = self.Main,
@@ -347,13 +561,14 @@ function Library:CreateWindow(opts)
 		AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 60),
 		BackgroundTransparency = 1, Parent = self.Gui,
 	})
-	create("UIListLayout", { Padding = UDim.new(0, 10), HorizontalAlignment = Enum.HorizontalAlignment.Center, Parent = self.Notes })
+	create("UIListLayout", { Padding = UDim.new(0, 8), HorizontalAlignment = Enum.HorizontalAlignment.Center, Parent = self.Notes })
 
+	self.FabStroke = stroke()
 	self.Fab = create("TextButton", {
 		Size = UDim2.fromOffset(44, 44), Position = UDim2.new(0, 16, 0.45, 0),
 		BackgroundColor3 = Theme.Topbar, BackgroundTransparency = 0.15, Text = firstChar(title),
 		TextColor3 = Theme.Accent, Font = Enum.Font.GothamBold, TextSize = 22, AutoButtonColor = false, Parent = self.Gui,
-	}, { corner(14), stroke() })
+	}, { corner(14), self.FabStroke })
 
 	local function snapFab()
 		local v, f = cam.ViewportSize, self.Fab
@@ -368,11 +583,25 @@ function Library:CreateWindow(opts)
 		if cx ~= c.X or cy ~= c.Y then tween(m, 0.2, { Position = UDim2.fromOffset(cx, cy) }) end
 	end
 
-	self:_drag(header, self.Main, nil, clampMain)
-	self:_drag(self.Fab, self.Fab, function() self:SetOpen(not self.Open) end, snapFab)
+	-- окно можно тянуть за любое место; на тач-экране не за область со скроллом (там прокрутка)
+	local function canDrag(i)
+		if self._locked then return false end
+		if i.UserInputType ~= Enum.UserInputType.Touch then return true end
+		local p = screenPos(i)
+		local a, s = self.Pages.AbsolutePosition, self.Pages.AbsoluteSize
+		local inPages = p.X >= a.X and p.X <= a.X + s.X and p.Y >= a.Y + 38 and p.Y <= a.Y + s.Y
+		return not inPages
+	end
+	self:_drag(self.Main, self.Main, nil, function() clampMain(); self:_queueGeo() end, canDrag)
+	self:_drag(self.Fab, self.Fab, function() self:SetOpen(not self.Open) end, function() snapFab(); self:_queueGeo() end)
 
+	-- ToggleKey и горячие клавиши элементов
 	self:_connect(UIS.InputBegan, function(i, processed)
-		if not processed and i.KeyCode == self.ToggleKey then self:SetOpen(not self.Open) end
+		if processed or i.UserInputType ~= Enum.UserInputType.Keyboard then return end
+		if i.KeyCode == self.ToggleKey then self:SetOpen(not self.Open); return end
+		for _, e in pairs(self._hotkeys) do
+			if e.key and e.key == i.KeyCode and e.action then safe(e.action) end
+		end
 	end)
 
 	self:_connect(cam:GetPropertyChangedSignal("ViewportSize"), function()
@@ -385,10 +614,80 @@ function Library:CreateWindow(opts)
 		self.Pages.Position = UDim2.fromOffset(w, 0)
 	end)
 
-	self.Main.GroupTransparency = 1; self.Scale.Scale = 0.95
+	self:LoadGeometry()
+	preloadSounds()
+
+	-- анимация появления
+	self.Main.GroupTransparency = 1
+	self.Scale.Scale = self.UserScale * 0.9
 	tween(self.Main, 0.25, { GroupTransparency = 0 })
-	tween(self.Scale, 0.28, { Scale = 1 }, Enum.EasingStyle.Quint)
+	tween(self.Scale, 0.32, { Scale = self.UserScale }, Enum.EasingStyle.Back)
+	Library:PlaySound("Open")
 	return self
+end
+
+----------------------------------------------------------------
+-- Геометрия окна: позиция, масштаб, развёрнутость сохраняются в файл
+----------------------------------------------------------------
+function Window:SaveGeometry()
+	if not self.SaveGeometryEnabled or typeof(writefile) ~= "function" or not self.Gui.Parent then return false end
+	local v = workspace.CurrentCamera.ViewportSize
+	local m, f = self.Main, self.Fab
+	local c = m.AbsolutePosition + m.AbsoluteSize / 2
+	local data = {
+		fx = c.X / v.X, fy = c.Y / v.Y, scale = self.UserScale, maximized = self.Maximized,
+		fabx = f.AbsolutePosition.X / v.X, faby = f.AbsolutePosition.Y / v.Y,
+	}
+	return (pcall(function() writefile(self._geoFile, HttpService:JSONEncode(data)) end))
+end
+
+function Window:LoadGeometry()
+	if not self.SaveGeometryEnabled or typeof(readfile) ~= "function" or typeof(isfile) ~= "function" then return false end
+	if not isfile(self._geoFile) then return false end
+	local ok, d = pcall(function() return HttpService:JSONDecode(readfile(self._geoFile)) end)
+	if not ok or type(d) ~= "table" then return false end
+	if type(d.scale) == "number" then self.UserScale = math.clamp(d.scale, 0.6, 1.4) end
+	if d.maximized == true then
+		self.Maximized = true
+		self._size = self._fullSize()
+		self.Main.Size = UDim2.fromOffset(self._size.X, self._size.Y)
+	end
+	if type(d.fx) == "number" and type(d.fy) == "number" then
+		self.Main.Position = UDim2.fromScale(math.clamp(d.fx, 0.05, 0.95), math.clamp(d.fy, 0.05, 0.95))
+	end
+	if type(d.fabx) == "number" and type(d.faby) == "number" then
+		self.Fab.Position = UDim2.fromScale(math.clamp(d.fabx, 0, 0.95), math.clamp(d.faby, 0, 0.92))
+	end
+	return true
+end
+
+function Window:_queueGeo()
+	if not self.SaveGeometryEnabled then return end
+	self._geoTok = (self._geoTok or 0) + 1
+	local my = self._geoTok
+	task.delay(0.8, function()
+		if my == self._geoTok and self.Gui.Parent then self:SaveGeometry() end
+	end)
+end
+
+function Window:SetScale(v)
+	v = math.clamp(tonumber(v) or 1, 0.6, 1.4)
+	self.UserScale = v
+	tween(self.Scale, 0.2, { Scale = v })
+	self:_queueGeo()
+end
+
+function Window:ResetGeometry()
+	self.Maximized = false; self.Minimized = false; self.UserScale = 1
+	self._size = self._fullSize()
+	tween(self.Main, 0.3, {
+		Size = UDim2.fromOffset(self._size.X, self._size.Y), Position = UDim2.fromScale(0.5, 0.5),
+	}, Enum.EasingStyle.Quint)
+	tween(self.Scale, 0.3, { Scale = 1 }, Enum.EasingStyle.Quint)
+	tween(self.Fab, 0.3, { Position = UDim2.new(0, 16, 0.45, 0) }, Enum.EasingStyle.Quint)
+	local setter = self._setters["_scale"]
+	if setter then pcall(setter, 100, true) end
+	self:_queueGeo()
 end
 
 function Window:SetMaximized(v)
@@ -398,14 +697,38 @@ function Window:SetMaximized(v)
 	tween(self.Main, 0.28, {
 		Size = UDim2.fromOffset(self._size.X, self._size.Y), Position = UDim2.fromScale(0.5, 0.5),
 	}, Enum.EasingStyle.Quint)
+	self:_queueGeo()
+end
+
+-- "rainbow" — обводка непрерывно меняет цвет, "theme" — вернуть цвет темы
+function Window:SetGlowMode(mode)
+	self._glow = mode
+	if self._glowConn then self._glowConn:Disconnect(); self._glowConn = nil end
+	if mode == "rainbow" then
+		local hue = 0
+		self._glowConn = RunService.RenderStepped:Connect(function(dt)
+			hue = (hue + dt * 0.12) % 1
+			local c = Color3.fromHSV(hue, 0.7, 1)
+			self.BorderStroke.Color = c
+			self.HeaderLine.BackgroundColor3 = c
+			self.FabStroke.Color = c
+		end)
+		table.insert(self._conns, self._glowConn)
+	else
+		self.BorderStroke.Color = Theme.Stroke
+		self.HeaderLine.BackgroundColor3 = Theme.Stroke
+		self.FabStroke.Color = Theme.Stroke
+	end
 end
 
 function Window:_connect(sig, fn) local c = sig:Connect(fn); table.insert(self._conns, c); return c end
 
-function Window:_drag(handle, target, onTap, onDrop)
+-- перетаскивание: allow(input) решает, можно ли начинать; onTap — если сдвига не было; onDrop — после сдвига
+function Window:_drag(handle, target, onTap, onDrop, allow)
 	local dragging, moved, ds, sp = false, false, nil, nil
 	handle.InputBegan:Connect(function(i)
 		if not isPointer(i) then return end
+		if allow and not allow(i) then return end
 		dragging, moved = true, false; ds, sp = i.Position, target.Position
 		i.Changed:Connect(function()
 			if i.UserInputState == Enum.UserInputState.End then
@@ -419,23 +742,26 @@ function Window:_drag(handle, target, onTap, onDrop)
 		if dragging and isMove(i) then
 			local d = i.Position - ds
 			if d.Magnitude > 6 then moved = true end
-			if moved or not onTap then
+			if moved then
 				target.Position = UDim2.new(sp.X.Scale, sp.X.Offset + d.X, sp.Y.Scale, sp.Y.Offset + d.Y)
-				if not onTap then moved = true end
 			end
 		end
 	end)
 end
 
 function Window:SetOpen(v)
+	if self.Open == v then return end
 	self.Open = v
+	local base = self.UserScale
 	if v then
+		Library:PlaySound("Open")
 		self.Main.Visible = true
 		tween(self.Main, 0.22, { GroupTransparency = 0 })
-		tween(self.Scale, 0.28, { Scale = 1 }, Enum.EasingStyle.Quint)
+		tween(self.Scale, 0.3, { Scale = base }, Enum.EasingStyle.Back)
 	else
+		Library:PlaySound("Close")
 		tween(self.Main, 0.15, { GroupTransparency = 1 })
-		tween(self.Scale, 0.15, { Scale = 0.95 })
+		tween(self.Scale, 0.15, { Scale = base * 0.92 })
 		task.delay(0.16, function() if not self.Open then self.Main.Visible = false end end)
 	end
 end
@@ -446,11 +772,19 @@ function Window:SetMinimized(v)
 end
 
 function Window:Destroy()
+	pcall(function() self:SaveGeometry() end)
 	for _, fn in ipairs(self._cleanups or {}) do pcall(fn) end
+	hideTip()
 	for i, w in ipairs(Library._windows) do if w == self then table.remove(Library._windows, i); break end end
 	for _, c in ipairs(self._conns) do c:Disconnect() end
 	table.clear(self._conns)
 	self.Gui:Destroy()
+	task.delay(1.5, function() if #Library._windows == 0 then destroySounds() end end)
+end
+
+function Window:_nextOrder()
+	self._order = (self._order or 0) + 1
+	return self._order
 end
 
 function Window:SelectTab(tab)
@@ -466,7 +800,14 @@ function Window:SelectTab(tab)
 			TextColor3 = on and Theme.Text or Theme.SubText,
 		})
 		tween(t.Indicator, 0.18, { BackgroundTransparency = on and 0 or 1 })
-		if t.Icon then tween(t.Icon, 0.18, { ImageColor3 = on and Theme.Accent or Theme.SubText }) end
+		if t.IconObj then
+			local prop = t.IconObj:IsA("ImageLabel") and "ImageColor3" or "TextColor3"
+			tween(t.IconObj, 0.18, { [prop] = on and Theme.Accent or Theme.SubText })
+			if on and self._current ~= t then -- поп-баунс иконки при переключении
+				t.IconScale.Scale = 0.5
+				tween(t.IconScale, 0.4, { Scale = 1 }, Enum.EasingStyle.Back)
+			end
+		end
 	end
 	self._current = tab
 end
@@ -492,30 +833,62 @@ function Window:Search(query)
 		t.Button.Visible = any
 		if any and not first then first = t end
 	end
+	for _, g in ipairs(self._groups) do
+		local any = false
+		for _, t in ipairs(g.Tabs) do if t.Button.Visible then any = true end end
+		g.Header.Visible = any
+	end
 	if self._current and not self._current.Button.Visible and first then self:SelectTab(first) end
 end
 
--- CreateTab(name, icon): icon — необязательный "rbxassetid://..."
+-- заголовок группы в сайдбаре: все следующие вкладки попадают под него
+function Window:AddTabGroup(name)
+	local h = create("TextLabel", {
+		Size = UDim2.new(1, 0, 0, 22), BackgroundTransparency = 1, Text = name, TextColor3 = Theme.SubText,
+		Font = Enum.Font.GothamBold, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left,
+		LayoutOrder = self:_nextOrder(), Parent = self._sbList,
+	}, { pad(6, 0, 6, 0) })
+	local g = { Header = h, Tabs = {} }
+	table.insert(self._groups, g)
+	self._curGroup = g
+	return g
+end
+
+-- CreateTab(name, icon): icon — "rbxassetid://..." / число (картинка) или короткий символ-глиф
 function Window:CreateTab(name, icon)
 	local padL = icon and 34 or 12
 	local button = create("TextButton", {
 		Size = UDim2.new(1, 0, 0, 32), BackgroundColor3 = Theme.Hover, BackgroundTransparency = 1,
 		BorderSizePixel = 0, Text = name, TextColor3 = Theme.SubText, Font = Enum.Font.GothamMedium,
 		TextSize = 13, TextTruncate = Enum.TextTruncate.AtEnd, TextXAlignment = Enum.TextXAlignment.Left,
-		AutoButtonColor = false, LayoutOrder = #self._tabs, Parent = self._sbList,
+		AutoButtonColor = false, LayoutOrder = self:_nextOrder(), Parent = self._sbList,
 	}, { corner(8), create("UIPadding", { PaddingLeft = UDim.new(0, padL), PaddingRight = UDim.new(0, 6) }) })
+	fx(button, nil)
 
 	local indicator = create("Frame", {
 		Size = UDim2.fromOffset(3, 14), Position = UDim2.new(0, 3 - padL, 0.5, -7),
 		BackgroundColor3 = Theme.Accent, BackgroundTransparency = 1, BorderSizePixel = 0, Parent = button,
 	}, { round() })
 
-	local iconLabel
+	local iconObj, iconScale
 	if icon then
-		iconLabel = create("ImageLabel", {
+		local holder = create("Frame", {
 			Size = UDim2.fromOffset(16, 16), Position = UDim2.new(0, 9 - padL, 0.5, -8),
-			BackgroundTransparency = 1, Image = icon, ImageColor3 = Theme.SubText, Parent = button,
+			BackgroundTransparency = 1, Parent = button,
 		})
+		iconScale = create("UIScale", { Parent = holder })
+		local s = tostring(icon)
+		if s:match("^rbxassetid") or s:match("^%d+$") then
+			iconObj = create("ImageLabel", {
+				Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1,
+				Image = s:match("^%d+$") and ("rbxassetid://" .. s) or s, ImageColor3 = Theme.SubText, Parent = holder,
+			})
+		else
+			iconObj = create("TextLabel", {
+				Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = s, TextColor3 = Theme.SubText,
+				Font = Enum.Font.GothamBold, TextSize = 14, Parent = holder,
+			})
+		end
 	end
 
 	local container = create("Frame", {
@@ -535,10 +908,11 @@ function Window:CreateTab(name, icon)
 	})
 
 	local tab = setmetatable({
-		Window = self, Page = page, Container = container, Button = button,
-		Indicator = indicator, Icon = iconLabel, Name = name,
+		Window = self, Page = page, Container = container, Button = button, Indicator = indicator,
+		IconObj = iconObj, IconScale = iconScale, Name = name,
 	}, Tab)
 	table.insert(self._tabs, tab)
+	if self._curGroup then table.insert(self._curGroup.Tabs, tab) end
 	button.MouseButton1Click:Connect(function() self:SelectTab(tab) end)
 	if #self._tabs == 1 then self:SelectTab(tab) end
 	return tab
@@ -547,84 +921,111 @@ end
 ----------------------------------------------------------------
 -- NOTIFY / DIALOG / TOAST
 ----------------------------------------------------------------
-local function dismiss(note)
-	if note and note.Parent and not note:GetAttribute("Closing") then
-		note:SetAttribute("Closing", true)
-		tween(note, 0.22, { GroupTransparency = 1 })
-		task.delay(0.25, function() if note then note:Destroy() end end)
+local NOTE_ICONS = { info = "i", success = "✓", warn = "!", warning = "!", error = "✕" }
+
+local function dismiss(holder)
+	if holder and holder.Parent and not holder:GetAttribute("Closing") then
+		holder:SetAttribute("Closing", true)
+		local note = holder:FindFirstChildOfClass("CanvasGroup")
+		if note then tween(note, 0.22, { GroupTransparency = 1, Position = UDim2.fromOffset(0, -14) }) end
+		task.delay(0.25, function() if holder then holder:Destroy() end end)
 	end
 end
 
 function Window:_limitNotes()
 	local list = {}
 	for _, c in ipairs(self.Notes:GetChildren()) do
-		if c:IsA("CanvasGroup") and not c:GetAttribute("Closing") then table.insert(list, c) end
+		if c:IsA("Frame") and not c:GetAttribute("Closing") then table.insert(list, c) end
 	end
 	while #list > MAX_NOTES do dismiss(table.remove(list, 1)) end
 end
 
+-- holder держит место в списке, внутри карточка с анимацией выезда
+local function buildNote(self, h)
+	local holder = create("Frame", { Size = UDim2.new(1, 0, 0, h), BackgroundTransparency = 1, Parent = self.Notes })
+	local note = create("CanvasGroup", {
+		Size = UDim2.fromScale(1, 1), Position = UDim2.fromOffset(0, -22), BackgroundColor3 = Theme.Topbar,
+		BorderSizePixel = 0, GroupTransparency = 1, Parent = holder,
+	}, { corner(12), stroke() })
+	return holder, note
+end
+
+-- цветной кружок с иконкой: ✓ успех, ✕ ошибка, ! предупреждение, i информация
+local function noteIcon(parent, kind, color)
+	local c = create("Frame", {
+		Size = UDim2.fromOffset(26, 26), Position = UDim2.fromOffset(14, 14),
+		BackgroundColor3 = color, BorderSizePixel = 0, Parent = parent,
+	}, { round() })
+	create("TextLabel", {
+		Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = NOTE_ICONS[kind] or "i",
+		TextColor3 = Color3.new(1, 1, 1), Font = Enum.Font.GothamBold, TextSize = 15, Parent = c,
+	})
+end
+
 function Window:Notify(o)
 	if type(o) ~= "table" then o = { Text = tostring(o) } end
-	local color = kindColor(o.Type)
+	local kind = string.lower(tostring(o.Type or "info"))
+	local color = kindColor(kind)
 	local dur = o.Duration or 4
 
-	local note = create("CanvasGroup", {
-		Size = UDim2.new(1, 0, 0, 88), BackgroundColor3 = Theme.Topbar,
-		BorderSizePixel = 0, GroupTransparency = 1, Parent = self.Notes,
-	}, { corner(14) })
-	local t = label(note, o.Title or "Notification", UDim2.new(1, -36, 0, 24), UDim2.fromOffset(18, 14), 16)
-	t.Font = Enum.Font.GothamBold
-	local d = label(note, o.Text or "", UDim2.new(1, -36, 0, 44), UDim2.fromOffset(18, 40), 13)
+	local holder, note = buildNote(self, 68)
+	noteIcon(note, kind, color)
+	label(note, o.Title or "Notification", UDim2.new(1, -66, 0, 20), UDim2.fromOffset(52, 9), 16).Font = Enum.Font.GothamBold
+	local d = label(note, o.Text or "", UDim2.new(1, -66, 0, 30), UDim2.fromOffset(52, 29), 13)
 	d.TextColor3 = Theme.SubText; d.TextWrapped = true; d.TextYAlignment = Enum.TextYAlignment.Top
 	local bar = create("Frame", {
-		Size = UDim2.new(1, 0, 0, 3), BackgroundColor3 = color, BackgroundTransparency = 0.4,
-		BorderSizePixel = 0, Parent = note,
+		Size = UDim2.new(1, 0, 0, 3), Position = UDim2.new(0, 0, 1, -3), BackgroundColor3 = color,
+		BackgroundTransparency = 0.3, BorderSizePixel = 0, Parent = note,
 	})
 	local tap = create("TextButton", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", Parent = note })
-	tap.MouseButton1Click:Connect(function() dismiss(note) end)
+	tap.MouseButton1Click:Connect(function() dismiss(holder) end)
 
+	Library:PlaySound("Notify")
 	tween(bar, dur, { Size = UDim2.new(0, 0, 0, 3) }, Enum.EasingStyle.Linear)
-	tween(note, 0.28, { GroupTransparency = 0 }, Enum.EasingStyle.Quint)
-	task.delay(dur, function() dismiss(note) end)
+	tween(note, 0.3, { GroupTransparency = 0, Position = UDim2.fromOffset(0, 0) }, Enum.EasingStyle.Back)
+	task.delay(dur, function() dismiss(holder) end)
 	self:_limitNotes()
 end
 
 function Window:NotifyWithButton(cfg)
 	cfg = cfg or {}
-	local note = create("CanvasGroup", {
-		Size = UDim2.new(1, 0, 0, 108), BackgroundColor3 = Theme.Topbar,
-		BorderSizePixel = 0, GroupTransparency = 1, Parent = self.Notes,
-	}, { corner(14) })
-	local t = label(note, cfg.Title or "Notification", UDim2.new(1, -130, 0, 24), UDim2.fromOffset(18, 14), 16)
-	t.Font = Enum.Font.GothamBold
-	local d = label(note, cfg.Text or "", UDim2.new(1, -130, 0, 56), UDim2.fromOffset(18, 40), 13)
+	local kind = string.lower(tostring(cfg.Type or "info"))
+	local color = kindColor(kind)
+	local holder, note = buildNote(self, 84)
+	noteIcon(note, kind, color)
+	label(note, cfg.Title or "Notification", UDim2.new(1, -150, 0, 20), UDim2.fromOffset(52, 9), 16).Font = Enum.Font.GothamBold
+	local d = label(note, cfg.Text or "", UDim2.new(1, -150, 0, 44), UDim2.fromOffset(52, 29), 13)
 	d.TextColor3 = Theme.SubText; d.TextWrapped = true; d.TextYAlignment = Enum.TextYAlignment.Top
 	local btn = create("TextButton", {
-		Size = UDim2.fromOffset(90, 40), Position = UDim2.new(1, -108, 0.5, -20),
-		BackgroundColor3 = kindColor(cfg.Type) == Theme.Info and Theme.Accent or kindColor(cfg.Type),
-		BorderSizePixel = 0, Text = cfg.ButtonText or "OK", TextColor3 = Color3.new(1, 1, 1),
+		Size = UDim2.fromOffset(80, 32), Position = UDim2.new(1, -92, 0.5, -16),
+		BackgroundColor3 = kind == "info" and Theme.Accent or color, BorderSizePixel = 0,
+		Text = cfg.ButtonText or "OK", TextColor3 = Color3.new(1, 1, 1),
 		Font = Enum.Font.GothamBold, TextSize = 13, AutoButtonColor = false, Parent = note,
-	}, { corner(10) })
-	btn.MouseButton1Click:Connect(function() safe(cfg.ButtonCallback); dismiss(note) end)
-	tween(note, 0.28, { GroupTransparency = 0 }, Enum.EasingStyle.Quint)
-	task.delay(cfg.Duration or 8, function() dismiss(note) end)
+	}, { corner(8) })
+	fx(btn, nil)
+	btn.MouseButton1Click:Connect(function() safe(cfg.ButtonCallback); dismiss(holder) end)
+	Library:PlaySound("Notify")
+	tween(note, 0.3, { GroupTransparency = 0, Position = UDim2.fromOffset(0, 0) }, Enum.EasingStyle.Back)
+	task.delay(cfg.Duration or 8, function() dismiss(holder) end)
 	self:_limitNotes()
 end
 
--- модальное окно: Window:Dialog({Title, Text, Buttons = {{Text, Callback, Primary}}})
+-- модальное окно на тёмной подложке; клик мимо = отмена
+-- Window:Dialog({ Title, Text, Buttons = {{ Text, Callback, Primary }}, OnCancel })
 function Window:Dialog(cfg)
 	cfg = cfg or {}
 	local cam = workspace.CurrentCamera
+	local closed = false
 	local overlay = create("TextButton", {
 		Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 1,
 		Text = "", AutoButtonColor = false, ZIndex = 50, Parent = self.Gui,
 	})
 	local card = create("CanvasGroup", {
 		Size = UDim2.fromOffset(math.min(320, cam.ViewportSize.X * 0.88), 0), AutomaticSize = Enum.AutomaticSize.Y,
-		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
+		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Active = true,
 		BackgroundColor3 = Theme.Topbar, BorderSizePixel = 0, GroupTransparency = 1, Parent = overlay,
-	}, { corner(16), pad(20, 20, 20, 20) })
-	local scale = create("UIScale", { Scale = 0.92, Parent = card })
+	}, { corner(14), stroke(), pad(18, 18, 18, 18) })
+	local scale = create("UIScale", { Scale = 0.9, Parent = card })
 	create("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder, Parent = card })
 
 	local t = label(card, cfg.Title or "Подтверждение", UDim2.new(1, 0, 0, 0), nil, 18)
@@ -634,12 +1035,14 @@ function Window:Dialog(cfg)
 	d.AutomaticSize = Enum.AutomaticSize.Y; d.TextWrapped = true; d.TextColor3 = Theme.SubText
 	d.TextTruncate = Enum.TextTruncate.None; d.LayoutOrder = 2
 
-	local rowB = create("Frame", { Size = UDim2.new(1, 0, 0, 44), BackgroundTransparency = 1, LayoutOrder = 3, Parent = card })
+	local rowB = create("Frame", { Size = UDim2.new(1, 0, 0, 38), BackgroundTransparency = 1, LayoutOrder = 3, Parent = card })
 	create("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), Parent = rowB })
 
 	local function close()
+		closed = true
+		Library:PlaySound("Close")
 		tween(card, 0.15, { GroupTransparency = 1 })
-		tween(scale, 0.15, { Scale = 0.92 })
+		tween(scale, 0.15, { Scale = 0.9 })
 		tween(overlay, 0.15, { BackgroundTransparency = 1 })
 		task.delay(0.18, function() overlay:Destroy() end)
 	end
@@ -653,12 +1056,32 @@ function Window:Dialog(cfg)
 			Text = bc.Text or "OK", TextColor3 = bc.Primary and Color3.new(1, 1, 1) or Theme.Text,
 			Font = Enum.Font.GothamBold, TextSize = 14, AutoButtonColor = false, LayoutOrder = idx, Parent = rowB,
 		}, { corner(8) })
-		b.MouseButton1Click:Connect(function() close(); safe(bc.Callback) end)
+		fx(b, b)
+		b.ClipsDescendants = true
+		b.MouseButton1Click:Connect(function()
+			if closed then return end
+			close(); safe(bc.Callback)
+		end)
 	end
+	overlay.MouseButton1Click:Connect(function()
+		if closed then return end
+		close(); safe(cfg.OnCancel)
+	end)
 
+	Library:PlaySound("Open")
 	tween(overlay, 0.2, { BackgroundTransparency = 0.45 })
 	tween(card, 0.2, { GroupTransparency = 0 })
-	tween(scale, 0.25, { Scale = 1 }, Enum.EasingStyle.Back)
+	tween(scale, 0.28, { Scale = 1 }, Enum.EasingStyle.Back)
+end
+
+function Window:Confirm(title, text, onYes, onNo)
+	self:Dialog({
+		Title = title, Text = text, OnCancel = onNo,
+		Buttons = {
+			{ Text = "Отмена", Callback = onNo },
+			{ Text = "Подтвердить", Primary = true, Callback = onYes },
+		},
+	})
 end
 
 function Window:Toast(text, duration)
@@ -709,10 +1132,12 @@ function Window:LoadConfig(name, fire)
 	if not isfile(file) then return false end
 	local ok, data = pcall(function() return HttpService:JSONDecode(readfile(file)) end)
 	if not ok or type(data) ~= "table" then return false end
+	Library._mute = true
 	for flag, value in pairs(data) do
 		local setter = self._setters[flag]
 		if setter then pcall(setter, decodeV(value), fire == false) end
 	end
+	Library._mute = false
 	return true
 end
 
@@ -781,6 +1206,53 @@ function Tab:AddDivider()
 	})
 end
 
+-- Горячая клавиша на любой элемент: опция Hotkey = Enum.KeyCode.X в конфиге элемента,
+-- либо удержание строки мышью 0.8с (кнопка, тумблер, список). Привязки сохраняются в конфиг.
+function Tab:_bindable(o)
+	local win = self.Window
+	local base = "hk_" .. tostring(o.Flag or o.Name or "item")
+	local id, n = base, 1
+	while win._hotkeys[id] do n += 1; id = base .. "_" .. n end
+	local flag = "_" .. id
+	local entry = { key = o.Hotkey }
+	win._hotkeys[id] = entry
+
+	local function setKey(k, silent)
+		entry.key = k
+		win:_setFlag(flag, k and k.Name or "", silent)
+	end
+	local obj = {}
+	function obj:Get() return entry.key and entry.key.Name or "" end
+	function obj:Set(v, s)
+		local k
+		if type(v) == "string" and v ~= "" then
+			local ok, res = pcall(function() return Enum.KeyCode[v] end)
+			if ok then k = res end
+		end
+		setKey(k, s)
+	end
+	win:_register(flag, obj, obj:Get())
+
+	function entry.startBind()
+		local name = tostring(o.Name or "элемент")
+		win:Notify({ Title = "Горячая клавиша", Text = "Нажми клавишу для «" .. name .. "» (Esc — убрать)", Type = "info", Duration = 4 })
+		local conn
+		conn = UIS.InputBegan:Connect(function(i)
+			if i.UserInputType ~= Enum.UserInputType.Keyboard then return end
+			conn:Disconnect()
+			if i.KeyCode == Enum.KeyCode.Escape then
+				setKey(nil)
+				win:Notify({ Title = "Горячая клавиша", Text = "Привязка убрана", Type = "warn", Duration = 2 })
+			else
+				setKey(i.KeyCode)
+				win:Notify({ Title = "Готово", Text = name .. " → " .. i.KeyCode.Name, Type = "success", Duration = 2 })
+			end
+		end)
+		table.insert(win._conns, conn)
+	end
+	return entry
+end
+
 function Tab:AddButton(o)
 	local desc = o.Description
 	local h = desc and 52 or ROW
@@ -791,7 +1263,11 @@ function Tab:AddButton(o)
 		Size = UDim2.fromOffset(20, h), Position = UDim2.new(1, -26, 0, 0), BackgroundTransparency = 1,
 		Text = "›", TextColor3 = Theme.SubText, Font = Enum.Font.GothamBold, TextSize = 22, Parent = row,
 	})
-	clickArea(row).MouseButton1Click:Connect(function() safe(o.Callback) end)
+	local hk = self:_bindable(o)
+	local btn = clickArea(row, nil, { Tooltip = o.Tooltip, OnHold = hk.startBind })
+	local function run() safe(o.Callback) end
+	onClick(btn, run)
+	hk.action = run
 	return row
 end
 
@@ -810,16 +1286,21 @@ function Tab:AddToggle(o)
 		Size = UDim2.fromOffset(16, 16), Position = state and UDim2.fromOffset(21, 3) or UDim2.fromOffset(3, 3),
 		BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Parent = sw,
 	}, { round() })
-	local btn = clickArea(row)
 	local obj = {}
 	local function set(v, silent)
 		state = v and true or false
 		win:_setFlag(o.Flag, state, silent)
 		tween(sw, 0.22, { BackgroundColor3 = state and Theme.Accent or Theme.Hover })
-		tween(knob, 0.22, { Position = state and UDim2.fromOffset(21, 3) or UDim2.fromOffset(3, 3) }, Enum.EasingStyle.Quint)
-		if not silent then safe(o.Callback, state) end
+		tween(knob, 0.25, { Position = state and UDim2.fromOffset(21, 3) or UDim2.fromOffset(3, 3) }, Enum.EasingStyle.Back)
+		if not silent then
+			Library:PlaySound(state and "ToggleOn" or "ToggleOff")
+			safe(o.Callback, state)
+		end
 	end
-	btn.MouseButton1Click:Connect(function() set(not state) end)
+	local hk = self:_bindable(o)
+	local btn = clickArea(row, nil, { NoClick = true, Tooltip = o.Tooltip, OnHold = hk.startBind })
+	onClick(btn, function() set(not state) end)
+	hk.action = function() set(not state) end
 	function obj:Set(v, s) set(v, s) end
 	function obj:Get() return state end
 	set(state, true); win:_register(o.Flag, obj, state)
@@ -830,6 +1311,8 @@ function Tab:AddSlider(o)
 	local win, page = self.Window, self.Page
 	local min, max, inc = o.Min or 0, o.Max or 100, o.Increment or 1
 	local value = o.Default or min
+	local dec = #((tostring(inc):match("%.(%d+)")) or "")
+	local fmt = "%." .. dec .. "f"
 	local row = newRow(page, 56)
 	label(row, o.Name, UDim2.new(1, -90, 0, 22), UDim2.fromOffset(12, 6), 15).Font = Enum.Font.GothamMedium
 	local vl = label(row, "", UDim2.new(0, 80, 0, 22), UDim2.new(1, -92, 0, 6), 14)
@@ -849,24 +1332,37 @@ function Tab:AddSlider(o)
 		Size = UDim2.new(1, 0, 0, 34), Position = UDim2.fromOffset(0, 22),
 		BackgroundTransparency = 1, Active = true, Parent = row,
 	})
+	attachTip(hit, o.Tooltip)
+
+	local st = { val = value }
+	local function render(x)
+		vl.Text = string.format(fmt, x) .. (o.Suffix or "")
+		fill.Size = UDim2.fromScale((max - min > 0) and (x - min) / (max - min) or 0, 1)
+	end
 	local obj = {}
-	local function set(v, silent)
+	-- animate = true: плавное «докручивание» (программная установка), перетаскивание — мгновенно
+	local function set(v, silent, animate)
 		v = math.floor((v - min) / inc + 0.5) * inc + min
 		v = math.clamp(math.floor(v * 10000 + 0.5) / 10000, min, max); value = v
 		win:_setFlag(o.Flag, v, silent)
-		vl.Text = tostring(v) .. (o.Suffix or "")
-		fill.Size = UDim2.fromScale((max - min > 0) and (v - min) / (max - min) or 0, 1)
+		if animate then animNumber(st, v, 0.3, render) else snapNumber(st, v, render) end
 		if not silent then safe(o.Callback, v) end
 	end
 	local function fromInput(i)
 		set(min + (max - min) * math.clamp((i.Position.X - bar.AbsolutePosition.X) / bar.AbsoluteSize.X, 0, 1))
 	end
 	local drag = false
-	hit.InputBegan:Connect(function(i) if isPointer(i) then drag = true; page.ScrollingEnabled = false; fromInput(i) end end)
+	hit.InputBegan:Connect(function(i)
+		if isPointer(i) then drag = true; page.ScrollingEnabled = false; fromInput(i) end
+	end)
 	win:_connect(UIS.InputChanged, function(i) if drag and isMove(i) then fromInput(i) end end)
-	win:_connect(UIS.InputEnded, function(i) if drag and isPointer(i) then drag = false; page.ScrollingEnabled = true end end)
-	function obj:Set(v, s) set(v, s) end
+	win:_connect(UIS.InputEnded, function(i)
+		if drag and isPointer(i) then drag = false; page.ScrollingEnabled = true end
+	end)
+	function obj:Set(v, s) set(v, s, true) end
 	function obj:Get() return value end
+	local hk = self:_bindable(o) -- клавиша: +шаг, после максимума — снова минимум
+	hk.action = function() set(value + inc > max and min or value + inc, false, true) end
 	set(value, true); win:_register(o.Flag, obj, value)
 	return obj
 end
@@ -909,7 +1405,8 @@ function Tab:AddDropdown(o)
 		Size = UDim2.fromOffset(24, ROW), Position = UDim2.new(1, -30, 0, 0), BackgroundTransparency = 1,
 		Text = "▾", TextColor3 = Theme.SubText, Font = Enum.Font.GothamBold, TextSize = 14, Parent = row,
 	})
-	local header = clickArea(row, ROW)
+	local hk = self:_bindable(o)
+	local header = clickArea(row, ROW, { Tooltip = o.Tooltip, OnHold = hk.startBind })
 	local list = create("Frame", {
 		Position = UDim2.fromOffset(0, ROW), Size = UDim2.new(1, 0, 0, 0), BackgroundTransparency = 1, Parent = row,
 	})
@@ -935,11 +1432,18 @@ function Tab:AddDropdown(o)
 				Text = tostring(opt), TextColor3 = Theme.Text, Font = Enum.Font.GothamMedium,
 				TextSize = 14, AutoButtonColor = false, Parent = list,
 			}, { corner(10) })
+			fx(b, nil)
 			b.MouseButton1Click:Connect(function() select(opt); setOpen(false) end)
 			buttons[opt] = b
 		end
 	end
-	header.MouseButton1Click:Connect(function() setOpen(not open) end)
+	onClick(header, function() setOpen(not open) end)
+	hk.action = function() -- горячая клавиша: следующий пункт списка
+		if #options == 0 then return end
+		local idx = 0
+		for k, v in ipairs(options) do if v == current then idx = k; break end end
+		select(options[idx % #options + 1])
+	end
 	function obj:Get() return current end
 	function obj:Set(v, s) select(v, s) end
 	function obj:Refresh(newOpts) options = newOpts; build(); select(current, true); if open then setOpen(true) end end
@@ -957,7 +1461,7 @@ function Tab:AddMultiDropdown(o)
 	label(row, o.Name or "Multi", UDim2.new(0.5, -16, 0, ROW), UDim2.fromOffset(16, 0), 15).Font = Enum.Font.GothamMedium
 	local vl = label(row, "", UDim2.new(0.4, -30, 0, ROW), UDim2.new(0.5, 0, 0, 0), 14)
 	vl.TextXAlignment = Enum.TextXAlignment.Right; vl.TextColor3 = Theme.Accent; vl.Font = Enum.Font.GothamBold
-	local header = clickArea(row, ROW)
+	local header = clickArea(row, ROW, { Tooltip = o.Tooltip })
 	local holder = create("Frame", {
 		Position = UDim2.fromOffset(0, ROW), Size = UDim2.new(1, 0, 0, 0), BackgroundTransparency = 1, Parent = row,
 	})
@@ -983,6 +1487,7 @@ function Tab:AddMultiDropdown(o)
 			win:_setFlag(o.Flag, getList())
 			safe(o.Callback, getList())
 		end)
+		fx(b, nil)
 		btns[opt] = { Name = opt, Btn = b }
 	end
 	header.MouseButton1Click:Connect(function()
@@ -1034,10 +1539,18 @@ function Tab:AddRadioGroup(o)
 			TextSize = 13, AutoButtonColor = false, LayoutOrder = idx, Parent = holder,
 		}, { round(), create("UIPadding", { PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 14) }) })
 		b.MouseButton1Click:Connect(function() set(opt) end)
+		fx(b, nil)
 		table.insert(btns, { Name = opt, Btn = b })
 	end
 	function obj:Get() return current end
 	function obj:Set(v, s) set(v, s) end
+	local hk = self:_bindable(o)
+	hk.action = function() -- горячая клавиша: следующий вариант
+		if #options == 0 then return end
+		local idx = 0
+		for k, v in ipairs(options) do if v == current then idx = k; break end end
+		set(options[idx % #options + 1])
+	end
 	set(current, true); win:_register(o.Flag, obj, current)
 	return obj
 end
@@ -1056,6 +1569,7 @@ function Tab:AddStepper(o)
 		}, { round() })
 	end
 	local minus, plus = sbtn("−", -108), sbtn("+", -40)
+	fx(minus, row); fx(plus, row)
 	local vl = create("TextLabel", {
 		Size = UDim2.fromOffset(40, 28), Position = UDim2.new(1, -78, 0.5, -14), BackgroundTransparency = 1,
 		Text = tostring(value), TextColor3 = Theme.Accent, Font = Enum.Font.GothamBold, TextSize = 15, Parent = row,
@@ -1070,6 +1584,8 @@ function Tab:AddStepper(o)
 	plus.MouseButton1Click:Connect(function() set(value + step) end)
 	function obj:Get() return value end
 	function obj:Set(v, s) set(v, s) end
+	local hk = self:_bindable(o)
+	hk.action = function() set(value + step > max and min or value + step) end
 	win:_register(o.Flag, obj, value)
 	return obj
 end
@@ -1087,6 +1603,7 @@ function Tab:AddKeybind(o)
 		TextSize = 13, AutoButtonColor = false, Parent = row,
 	}, { corner(10) })
 	local obj = {}
+	fx(badge, row)
 	local function refresh() badge.Text = listening and "..." or key.Name end
 	badge.MouseButton1Click:Connect(function()
 		if listening then return end
@@ -1130,7 +1647,7 @@ function Tab:AddColorPicker(o)
 		BackgroundColor3 = color, BorderSizePixel = 0, Parent = row,
 	}, { round() })
 	preview:SetAttribute("NoTheme", true)
-	local header = clickArea(row, ROW)
+	local header = clickArea(row, ROW, { Tooltip = o.Tooltip })
 	local holder = create("Frame", {
 		Position = UDim2.fromOffset(0, ROW), Size = UDim2.new(1, 0, 0, 128), BackgroundTransparency = 1, Parent = row,
 	})
@@ -1239,21 +1756,25 @@ function Tab:AddProgressBar(o)
 	local fill = create("Frame", {
 		Size = UDim2.fromScale(0, 1), BackgroundColor3 = Theme.Accent, BorderSizePixel = 0, Parent = bar,
 	}, { round() })
-	local obj = {}
-	local function set(x)
-		value = math.clamp(x, min, max)
-		local a = (max - min > 0) and (value - min) / (max - min) or 0
-		tween(fill, 0.2, { Size = UDim2.fromScale(a, 1) })
-		vl.Text = math.floor(a * 100) .. (o.Suffix or "%")
+	local st = { val = value }
+	local function render(x)
+		local a = (max - min > 0) and (x - min) / (max - min) or 0
+		fill.Size = UDim2.fromScale(a, 1)
+		vl.Text = math.floor(a * 100 + 0.5) .. (o.Suffix or "%")
 	end
-	function obj:Set(x) set(x) end
+	local obj = {}
+	function obj:Set(x)
+		value = math.clamp(x, min, max)
+		animNumber(st, value, 0.35, render) -- плавное докручивание значения
+	end
 	function obj:Get() return value end
-	set(value)
+	snapNumber(st, value, render)
 	return obj
 end
 
--- крутящийся индикатор: градиентная обводка, чтобы вращение было видно
+-- кольцо-спиннер без внешних картинок: SetActive(bool) включает/выключает вращение
 function Tab:AddLoader(o)
+	o = o or {}
 	local row = newRow(self.Page)
 	local ring = create("Frame", {
 		Size = UDim2.fromOffset(22, 22), Position = UDim2.fromOffset(12, 9),
@@ -1264,15 +1785,28 @@ function Tab:AddLoader(o)
 		Parent = st, Rotation = 0,
 		Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.6, 1), NumberSequenceKeypoint.new(1, 1) }),
 	})
-	label(row, o.Name or "Загрузка...", UDim2.new(1, -50, 1, 0), UDim2.fromOffset(44, 0), 15).Font = Enum.Font.GothamMedium
+	local lbl = label(row, o.Name or "Загрузка...", UDim2.new(1, -50, 1, 0), UDim2.fromOffset(44, 0), 15)
+	lbl.Font = Enum.Font.GothamMedium
+	local active = o.Active ~= false
 	local conn
 	conn = RunService.Heartbeat:Connect(function(dt)
 		if not ring.Parent then conn:Disconnect(); return end
-		ring.Rotation = (ring.Rotation + 360 * dt) % 360
+		if active then ring.Rotation = (ring.Rotation + 360 * dt) % 360 end
 	end)
 	table.insert(self.Window._conns, conn)
-	return { Stop = function() if conn then conn:Disconnect() end; ring.Visible = false end }
+	local obj = {}
+	function obj:SetActive(on)
+		active = on and true or false
+		tween(st, 0.2, { Transparency = active and 0 or 0.7 })
+	end
+	function obj:Start() obj:SetActive(true) end
+	function obj:Stop() obj:SetActive(false) end
+	function obj:SetText(t) lbl.Text = t end
+	obj:SetActive(active)
+	return obj
 end
+
+Tab.CreateLoader = Tab.AddLoader
 
 ----------------------------------------------------------------
 -- ТЕМЫ
@@ -1448,54 +1982,103 @@ end
 ----------------------------------------------------------------
 -- ГОТОВЫЕ ВКЛАДКИ
 ----------------------------------------------------------------
-function Window:AddConfigTab(tab)
-	tab:AddSection("Конфиг")
-	local list
+function Window:DeleteConfig(name)
+	if typeof(delfile) ~= "function" or typeof(isfile) ~= "function" then return false end
+	local f = "GuiLib_" .. tostring(name) .. ".json"
+	if not isfile(f) then return false end
+	return (pcall(delfile, f))
+end
+
+Window.GetConfigs = Window.ListConfigs
+
+-- загрузить профиль, выбранный для автозагрузки (вызывай в конце скрипта, когда все элементы созданы)
+function Window:AutoLoad()
+	if typeof(readfile) ~= "function" or typeof(isfile) ~= "function" or not isfile(self._autoFile) then return false end
+	local ok, name = pcall(readfile, self._autoFile)
+	if ok and type(name) == "string" and name ~= "" then
+		self.ConfigName = name
+		return self:LoadConfig(name)
+	end
+	return false
+end
+
+-- готовый блок «Сохранить / Загрузить / Удалить профиль» с выпадающим списком
+function Window:CreateConfigManager(tab)
+	tab:AddSection("Профили конфигов")
+	local drop
 	local function refresh()
-		local names = self:ListConfigs()
-		if list then list:Refresh(names) end
+		if drop then drop:Refresh(self:ListConfigs()) end
 	end
 	tab:AddTextbox({
-		Name = "Имя", Default = self.ConfigName or "default", Placeholder = "my_config",
+		Name = "Имя профиля", Default = self.ConfigName or "default", Placeholder = "my_config",
 		Callback = function(n) if n ~= "" then self.ConfigName = n end end,
 	})
-	list = tab:AddDropdown({
-		Name = "Сохранённые", Options = self:ListConfigs(),
+	drop = tab:AddDropdown({
+		Name = "Профили", Options = self:ListConfigs(),
 		Callback = function(n) if n then self.ConfigName = n end end,
 	})
-	tab:AddButton({ Name = "Сохранить", Callback = function()
+	tab:AddButton({ Name = "Сохранить профиль", Description = "Все значения элементов и горячие клавиши", Callback = function()
 		local ok = self:SaveConfig()
 		refresh()
 		self:Notify({
-			Title = ok and "Успех" or "Ошибка", Type = ok and "success" or "error",
-			Text = ok and ("Сохранено: " .. self.ConfigName) or "writefile недоступен",
+			Title = ok and "Сохранено" or "Ошибка", Type = ok and "success" or "error", Duration = 2.5,
+			Text = ok and ("Профиль: " .. self.ConfigName) or "writefile недоступен",
 		})
 	end })
-	tab:AddButton({ Name = "Загрузить", Callback = function()
+	tab:AddButton({ Name = "Загрузить профиль", Callback = function()
 		local ok = self:LoadConfig()
 		self:Notify({
-			Title = ok and "Успех" or "Ошибка", Type = ok and "success" or "error",
-			Text = ok and ("Загружено: " .. self.ConfigName) or "Файл не найден",
+			Title = ok and "Загружено" or "Ошибка", Type = ok and "success" or "error", Duration = 2.5,
+			Text = ok and ("Профиль: " .. self.ConfigName) or "Файл не найден",
 		})
 	end })
-	tab:AddToggle({ Name = "Автосохранение", Default = self.AutoSave, Callback = function(v) self.AutoSave = v end })
-	refresh()
+	tab:AddButton({ Name = "Удалить профиль", Callback = function()
+		local name = self.ConfigName
+		self:Confirm("Удалить профиль?", "Профиль «" .. name .. "» будет удалён без возможности восстановления.", function()
+			local ok = self:DeleteConfig(name)
+			refresh()
+			self:Notify({
+				Title = ok and "Удалено" or "Ошибка", Type = ok and "success" or "error", Duration = 2.5,
+				Text = ok and name or "Не удалось удалить (delfile недоступен?)",
+			})
+		end)
+	end })
+
+	local cur
+	if typeof(isfile) == "function" and typeof(readfile) == "function" and isfile(self._autoFile) then
+		local ok, v = pcall(readfile, self._autoFile)
+		if ok then cur = v end
+	end
+	tab:AddToggle({
+		Name = "Автозагрузка профиля", Description = "Окно само применит выбранный профиль при запуске (win:AutoLoad())",
+		Default = cur ~= nil and cur == self.ConfigName,
+		Callback = function(v)
+			if typeof(writefile) ~= "function" then return end
+			if v then
+				pcall(writefile, self._autoFile, self.ConfigName)
+			elseif typeof(delfile) == "function" then
+				pcall(delfile, self._autoFile)
+			else
+				pcall(writefile, self._autoFile, "")
+			end
+		end,
+	})
+	tab:AddButton({ Name = "Обновить список профилей", Callback = refresh })
 end
 
-function Library:AddAutoTabs(win, opts)
-	opts = opts or {}
-	-- функционал (Движение / Визуал / Прочее); отключить: AddAutoTabs(win, { Features = false })
-	if opts.Features ~= false then Library:AddFeatureTabs(win) end
+Window.AddConfigTab = Window.CreateConfigManager
 
-	-- Профиль
-	local tabP = win:CreateTab("Профиль")
-	tabP:AddSectionInfo("Профиль", "Информация о тебе")
+-- Стартовые вкладки: «Настройки» и «Темы»
+function Library:AddAutoTabs(win)
+	-- ===== Настройки =====
+	local tabS = win:CreateTab("Настройки", "⚙")
+	tabS:AddSection("Профиль")
 	local card = create("Frame", {
-		Size = UDim2.new(1, 0, 0, 90), BackgroundColor3 = Theme.Element, BackgroundTransparency = Theme.RowAlpha,
-		BorderSizePixel = 0, Parent = tabP.Page,
-	}, { corner(8) })
+		Size = UDim2.new(1, 0, 0, 76), BackgroundColor3 = Theme.Element, BackgroundTransparency = Theme.RowAlpha,
+		BorderSizePixel = 0, Parent = tabS.Page,
+	}, { corner(8), stroke() })
 	local avatar = create("ImageLabel", {
-		Size = UDim2.fromOffset(66, 66), Position = UDim2.fromOffset(12, 12),
+		Size = UDim2.fromOffset(54, 54), Position = UDim2.fromOffset(11, 11),
 		BackgroundColor3 = Theme.Hover, BorderSizePixel = 0, Parent = card,
 	}, { round() })
 	local function loadAvatar()
@@ -1506,41 +2089,60 @@ function Library:AddAutoTabs(win, opts)
 		return ok
 	end
 	task.spawn(loadAvatar)
-	label(card, LP.DisplayName, UDim2.new(1, -100, 0, 24), UDim2.fromOffset(90, 14), 17).Font = Enum.Font.GothamBold
-	label(card, "@" .. LP.Name, UDim2.new(1, -100, 0, 18), UDim2.fromOffset(90, 40), 13).TextColor3 = Theme.SubText
-	label(card, "ID: " .. LP.UserId, UDim2.new(1, -100, 0, 18), UDim2.fromOffset(90, 60), 12).TextColor3 = Theme.SubText
-
-	tabP:AddSectionInfo("Статистика", "Живые данные")
-	local statCard = create("Frame", {
-		Size = UDim2.new(1, 0, 0, 112), BackgroundColor3 = Theme.Element, BackgroundTransparency = Theme.RowAlpha,
-		BorderSizePixel = 0, Parent = tabP.Page,
-	}, { corner(8) })
-	local statLbl = label(statCard, "", UDim2.new(1, -24, 1, -20), UDim2.fromOffset(12, 10), 13)
-	statLbl.TextWrapped = true; statLbl.TextYAlignment = Enum.TextYAlignment.Top; statLbl.TextColor3 = Theme.SubText
-	statLbl.TextTruncate = Enum.TextTruncate.None
+	label(card, LP.DisplayName, UDim2.new(1, -86, 0, 22), UDim2.fromOffset(76, 10), 17).Font = Enum.Font.GothamBold
+	label(card, "@" .. LP.Name, UDim2.new(1, -86, 0, 16), UDim2.fromOffset(76, 32), 13).TextColor3 = Theme.SubText
+	local live = label(card, "", UDim2.new(1, -86, 0, 16), UDim2.fromOffset(76, 50), 12)
+	live.TextColor3 = Theme.SubText
 	task.spawn(function()
-		while statCard.Parent do
-			local char = LP.Character
-			local hum = char and char:FindFirstChildOfClass("Humanoid")
-			local hrp = char and char:FindFirstChild("HumanoidRootPart")
-			local pos = hrp and hrp.Position or Vector3.zero
+		while card.Parent do
 			local fps = math.floor(1 / RunService.RenderStepped:Wait())
 			local ping = 0
 			pcall(function() ping = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue()) end)
-			statLbl.Text = string.format(
-				"HP: %d / %d\nПозиция: %.0f, %.0f, %.0f\nFPS: %d   Пинг: %d мс\nИгроков онлайн: %d",
-				hum and hum.Health or 0, hum and hum.MaxHealth or 100, pos.X, pos.Y, pos.Z, fps, ping, #Players:GetPlayers())
+			live.Text = string.format("%d FPS  •  %d мс  •  онлайн %d", fps, ping, #Players:GetPlayers())
 			task.wait(1)
 		end
 	end)
-	tabP:AddButton({ Name = "Обновить профиль", Callback = function()
-		local ok = loadAvatar()
-		win:Notify({ Title = ok and "Успех" or "Ошибка", Text = ok and "Профиль обновлён" or "Не удалось загрузить аватар",
-			Type = ok and "success" or "error", Duration = 2 })
-	end })
 
-	-- Темы
-	local tabT = win:CreateTab("Темы")
+	tabS:AddSection("Окно")
+	tabS:AddSlider({
+		Name = "Масштаб окна", Min = 60, Max = 140, Default = math.floor(win.UserScale * 100 + 0.5), Suffix = "%",
+		Flag = "_scale", Tooltip = "Размер всего окна; сохраняется между запусками",
+		Callback = function(v) win:SetScale(v / 100) end,
+	})
+	tabS:AddToggle({
+		Name = "Закрепить окно", Description = "Запретить перетаскивание", Flag = "_lock",
+		Callback = function(v) win._locked = v end,
+	})
+	tabS:AddToggle({
+		Name = "Радужная обводка", Flag = "_rainbow", Tooltip = "Обводка окна плавно меняет цвет",
+		Callback = function(v) win:SetGlowMode(v and "rainbow" or "theme") end,
+	})
+	tabS:AddButton({ Name = "Сбросить позицию и масштаб", Callback = function() win:ResetGeometry() end })
+
+	tabS:AddSection("Звук")
+	tabS:AddToggle({
+		Name = "Звуки интерфейса", Default = Library.SoundEnabled, Flag = "_sound",
+		Callback = function(v) Library:SetSoundsEnabled(v) end,
+	})
+	tabS:AddSlider({
+		Name = "Громкость", Min = 0, Max = 100, Default = math.floor(Library.SoundVolume * 100), Suffix = "%", Flag = "_volume",
+		Callback = function(v) Library:SetSoundVolume(v / 100); Library:PlaySound("Click") end,
+	})
+
+	tabS:AddSection("Интерфейс")
+	tabS:AddToggle({
+		Name = "Watermark", Description = "Ник и FPS сверху справа", Flag = "_watermark",
+		Callback = function(v) Library:SetWatermark(win, v) end,
+	})
+	tabS:AddToggle({
+		Name = "Эффект касания", Flag = "_clickfx",
+		Callback = function(v) win:SetClickFx({ Enabled = v }) end,
+	})
+
+	win:CreateConfigManager(tabS)
+
+	-- ===== Темы =====
+	local tabT = win:CreateTab("Темы", "◐")
 	tabT:AddSection("Тема")
 	tabT:AddDropdown({
 		Name = "Готовая тема", Options = Library:GetThemes(), Default = "Fluent", Flag = "_theme",
@@ -1555,7 +2157,7 @@ function Library:AddAutoTabs(win, opts)
 			task.delay(0.12, function() if my == token then Library:SetAccent(c) end end) -- без лагов при перетаскивании
 		end,
 	})
-	tabT:AddSection("Интерфейс")
+	tabT:AddSection("Стекло")
 	tabT:AddSlider({
 		Name = "Прозрачность окна", Min = 0, Max = 80, Default = math.floor(Theme.GlassAlpha * 100), Suffix = "%", Flag = "_glass",
 		Callback = function(v)
@@ -1563,10 +2165,6 @@ function Library:AddAutoTabs(win, opts)
 			for _, w in ipairs(Library._windows) do w.Main.BackgroundTransparency = Theme.GlassAlpha end
 		end,
 	})
-	tabT:AddToggle({ Name = "Watermark", Description = "Ник и FPS сверху справа", Flag = "_watermark",
-		Callback = function(v) Library:SetWatermark(win, v) end })
-	tabT:AddToggle({ Name = "Эффект касания", Flag = "_clickfx",
-		Callback = function(v) win:SetClickFx({ Enabled = v }) end })
 end
 
 ----------------------------------------------------------------
