@@ -1,5 +1,5 @@
 --!nonstrict
--- GuiLib v11.0 — Fluent Glass: звуки, анимации, профили конфигов, геометрия и размер окна, горячие клавиши, тултипы
+-- GuiLib v10.0 — Fluent Glass: звуки, анимации, профили конфигов, геометрия окна, горячие клавиши, тултипы
 --
 -- Исправлено:  темы/CloseAll через реестр окон, ClickFx, LoadConfig с колбэками,
 --              тип уведомления "warn", ColorPicker на телефоне (скролл + GuiInset),
@@ -23,8 +23,7 @@ local LP = Players.LocalPlayer
 local Library = {}
 local Window = {}; Window.__index = Window
 local Tab = {}; Tab.__index = Tab
-Library.Version = "11.0"
-Library.Animations = true -- false: все анимации мгновенные (для слабых устройств)
+Library.Version = "10.2"
 Library.Brand = "GuiLib"
 Library._windows = {}
 
@@ -71,10 +70,6 @@ local function pad(t, b, l, r)
 end
 
 local function tween(o, t, p, s, d)
-	if Library.Animations == false then
-		for k, v in pairs(p) do pcall(function() o[k] = v end) end
-		return { Cancel = function() end, Play = function() end }
-	end
 	local tw = TweenService:Create(o, TweenInfo.new(t, s or Enum.EasingStyle.Quad, d or Enum.EasingDirection.Out), p)
 	tw:Play(); return tw
 end
@@ -251,7 +246,6 @@ end
 -- RIPPLE / КЛИК / HOVER
 ----------------------------------------------------------------
 local function ripple(row, input)
-	if Library.Animations == false then return end
 	local x = input.Position.X - row.AbsolutePosition.X
 	local c = create("Frame", {
 		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, x, 0, math.min(row.AbsoluteSize.Y, ROW) / 2),
@@ -434,9 +428,6 @@ function Library:CreateWindow(opts)
 	local function fullSize()
 		local v = cam.ViewportSize
 		if self.Maximized then return Vector2.new(v.X * 0.96, v.Y * 0.9) end
-		if self._customSize then
-			return Vector2.new(math.clamp(self._customSize.X, 340, math.max(340, v.X * 0.98)), math.clamp(self._customSize.Y, 220, math.max(220, v.Y * 0.95)))
-		end
 		return Vector2.new(math.min(640, v.X * 0.94), math.min(440, v.Y * 0.78))
 	end
 	local function sbWidth() return math.clamp(math.floor(cam.ViewportSize.X * 0.24), 90, 150) end
@@ -486,7 +477,6 @@ function Library:CreateWindow(opts)
 	})
 	local tl = label(th, title, UDim2.fromOffset(0, 20), nil, 15)
 	tl.AutomaticSize = Enum.AutomaticSize.X; tl.TextTruncate = Enum.TextTruncate.None; tl.Font = Enum.Font.GothamMedium
-	self.TitleLabel = tl
 	if opts.Subtitle then
 		local sl = label(th, opts.Subtitle, UDim2.fromOffset(0, 20), nil, 12)
 		sl.AutomaticSize = Enum.AutomaticSize.X; sl.TextTruncate = Enum.TextTruncate.None; sl.TextColor3 = Theme.SubText
@@ -626,48 +616,6 @@ function Library:CreateWindow(opts)
 		self.Pages.Position = UDim2.fromOffset(w, 0)
 	end)
 
-	-- ручка изменения размера окна (правый нижний угол)
-	local grip = create("TextButton", {
-		Size = UDim2.fromOffset(26, 26), AnchorPoint = Vector2.new(1, 1), Position = UDim2.fromScale(1, 1),
-		BackgroundTransparency = 1, Text = "", AutoButtonColor = false, ZIndex = 30, Parent = self.Main,
-	})
-	for _, ln in ipairs({ { 18, 15 }, { 8, 19 } }) do
-		create("Frame", {
-			Size = UDim2.fromOffset(ln[1], 2), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(ln[2], ln[2]),
-			Rotation = -45, BackgroundColor3 = Theme.SubText, BackgroundTransparency = 0.3, BorderSizePixel = 0, Parent = grip,
-		})
-	end
-	local rz
-	grip.InputBegan:Connect(function(i)
-		if not isPointer(i) or self.Maximized or self.Minimized or self._locked then return end
-		rz = { start = i.Position, size = self._size, pos = self.Main.Position }
-	end)
-	self:_connect(UIS.InputChanged, function(i)
-		if not rz or not isMove(i) then return end
-		local d, sc, v = i.Position - rz.start, self.UserScale, cam.ViewportSize
-		local w = math.clamp(rz.size.X + d.X / sc, 340, math.max(340, v.X * 0.98 / sc))
-		local h = math.clamp(rz.size.Y + d.Y / sc, 220, math.max(220, v.Y * 0.95 / sc))
-		self._size = Vector2.new(w, h)
-		self._customSize = self._size
-		self.Main.Size = UDim2.fromOffset(w, h)
-		-- левый верхний угол остаётся на месте
-		self.Main.Position = UDim2.new(rz.pos.X.Scale, rz.pos.X.Offset + (w - rz.size.X) * sc / 2, rz.pos.Y.Scale, rz.pos.Y.Offset + (h - rz.size.Y) * sc / 2)
-	end)
-	self:_connect(UIS.InputEnded, function(i)
-		if rz and isPointer(i) then rz = nil; self:_queueGeo() end
-	end)
-
-	-- прокрутка активной вкладки кнопками ▲ ▼ (одно соединение на окно)
-	self._scrollDir = 0
-	self:_connect(RunService.Heartbeat, function(dt)
-		local tb = self._current
-		if self._scrollDir ~= 0 and tb and tb.Container.Visible then
-			local pg = tb.Page
-			local maxY = math.max(0, pg.AbsoluteCanvasSize.Y - pg.AbsoluteWindowSize.Y)
-			pg.CanvasPosition = Vector2.new(0, math.clamp(pg.CanvasPosition.Y + self._scrollDir * dt * 520, 0, maxY))
-		end
-	end)
-
 	self:LoadGeometry()
 	preloadSounds()
 
@@ -691,7 +639,6 @@ function Window:SaveGeometry()
 	local data = {
 		fx = c.X / v.X, fy = c.Y / v.Y, scale = self.UserScale, maximized = self.Maximized,
 		fabx = f.AbsolutePosition.X / v.X, faby = f.AbsolutePosition.Y / v.Y,
-		w = self._customSize and self._customSize.X or nil, h = self._customSize and self._customSize.Y or nil,
 	}
 	return (pcall(function() writefile(self._geoFile, HttpService:JSONEncode(data)) end))
 end
@@ -702,11 +649,6 @@ function Window:LoadGeometry()
 	local ok, d = pcall(function() return HttpService:JSONDecode(readfile(self._geoFile)) end)
 	if not ok or type(d) ~= "table" then return false end
 	if type(d.scale) == "number" then self.UserScale = math.clamp(d.scale, 0.6, 1.4) end
-	if type(d.w) == "number" and type(d.h) == "number" then
-		self._customSize = Vector2.new(d.w, d.h)
-		self._size = self._fullSize()
-		self.Main.Size = UDim2.fromOffset(self._size.X, self._size.Y)
-	end
 	if d.maximized == true then
 		self.Maximized = true
 		self._size = self._fullSize()
@@ -738,7 +680,7 @@ function Window:SetScale(v)
 end
 
 function Window:ResetGeometry()
-	self.Maximized = false; self.Minimized = false; self.UserScale = 1; self._customSize = nil
+	self.Maximized = false; self.Minimized = false; self.UserScale = 1
 	self._size = self._fullSize()
 	tween(self.Main, 0.3, {
 		Size = UDim2.fromOffset(self._size.X, self._size.Y), Position = UDim2.fromScale(0.5, 0.5),
@@ -830,12 +772,6 @@ function Window:SetMinimized(v)
 	self.Minimized = v
 	tween(self.Main, 0.25, { Size = UDim2.fromOffset(self._size.X, v and 40 or self._size.Y) }, Enum.EasingStyle.Quint)
 end
-
-function Window:SetTitle(text)
-	if self.TitleLabel then self.TitleLabel.Text = tostring(text) end
-end
-
-function Window:Toggle() self:SetOpen(not self.Open) end
 
 function Window:Destroy()
 	pcall(function() self:SaveGeometry() end)
@@ -978,6 +914,7 @@ function Window:CreateTab(name, icon)
 	})
 
 	-- кнопки прокрутки в строке заголовка: удерживай ▲ / ▼
+	local dirHeld = 0
 	local function scrollBtn(text, x, dir)
 		local b = create("TextButton", {
 			Size = UDim2.fromOffset(30, 26), Position = UDim2.new(1, x, 0, 4), BackgroundColor3 = Theme.Element,
@@ -985,12 +922,12 @@ function Window:CreateTab(name, icon)
 			Font = Enum.Font.GothamBold, TextSize = 12, AutoButtonColor = false, Parent = container,
 		}, { corner(8), stroke() })
 		local function release()
-			if self._scrollDir == dir then self._scrollDir = 0 end
+			if dirHeld == dir then dirHeld = 0 end
 			tween(b, 0.15, { BackgroundColor3 = Theme.Element, TextColor3 = Theme.SubText })
 		end
 		b.InputBegan:Connect(function(i)
 			if isPointer(i) then
-				self._scrollDir = dir
+				dirHeld = dir
 				tween(b, 0.1, { BackgroundColor3 = Theme.Hover, TextColor3 = Theme.Accent })
 			end
 		end)
@@ -999,6 +936,12 @@ function Window:CreateTab(name, icon)
 	end
 	scrollBtn("▲", -72, -1)
 	scrollBtn("▼", -38, 1)
+	self:_connect(RunService.Heartbeat, function(dt)
+		if dirHeld ~= 0 and container.Visible then
+			local maxY = math.max(0, page.AbsoluteCanvasSize.Y - page.AbsoluteWindowSize.Y)
+			page.CanvasPosition = Vector2.new(0, math.clamp(page.CanvasPosition.Y + dirHeld * dt * 520, 0, maxY))
+		end
+	end)
 
 	local tab = setmetatable({
 		Window = self, Page = page, Container = container, Button = button, Indicator = indicator,
@@ -1983,33 +1926,29 @@ do
 	for _, n in ipairs(names) do table.insert(THEME_ORDER, n) end
 end
 
-local function hex(c)
-	return string.format("%02X%02X%02X", math.floor(c.R * 255 + 0.5), math.floor(c.G * 255 + 0.5), math.floor(c.B * 255 + 0.5))
-end
-
 local function recolor(root, map)
 	for _, obj in ipairs(root:GetDescendants()) do
 		if not obj:GetAttribute("NoTheme") then
 			pcall(function()
 				if obj:IsA("GuiObject") then
-					local n = hex(map[obj.BackgroundColor3)]; if n then obj.BackgroundColor3 = n end
+					local n = map[obj.BackgroundColor3:ToHex()]; if n then obj.BackgroundColor3 = n end
 				end
 				if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
-					local n = hex(map[obj.TextColor3)]; if n then obj.TextColor3 = n end
+					local n = map[obj.TextColor3:ToHex()]; if n then obj.TextColor3 = n end
 				end
 				if obj:IsA("ImageLabel") then
-					local n = hex(map[obj.ImageColor3)]; if n then obj.ImageColor3 = n end
+					local n = map[obj.ImageColor3:ToHex()]; if n then obj.ImageColor3 = n end
 				end
 				if obj:IsA("ScrollingFrame") then
-					local n = hex(map[obj.ScrollBarImageColor3)]; if n then obj.ScrollBarImageColor3 = n end
+					local n = map[obj.ScrollBarImageColor3:ToHex()]; if n then obj.ScrollBarImageColor3 = n end
 				end
 				if obj:IsA("UIStroke") then
-					local n = hex(map[obj.Color)]; if n then obj.Color = n end
+					local n = map[obj.Color:ToHex()]; if n then obj.Color = n end
 				end
 				if obj:IsA("UIGradient") then
 					local kps, changed = {}, false
 					for _, kp in ipairs(obj.Color.Keypoints) do
-						local n = hex(map[kp.Value)]
+						local n = map[kp.Value:ToHex()]
 						if n then changed = true end
 						table.insert(kps, ColorSequenceKeypoint.new(kp.Time, n or kp.Value))
 					end
@@ -2025,7 +1964,7 @@ function Library:ApplyPalette(pal)
 	local map = {}
 	for _, k in ipairs(THEME_KEYS) do
 		local new = pal[k]
-		if new and new ~= Theme[k] then hex(map[Theme[k])] = new end
+		if new and new ~= Theme[k] then map[Theme[k]:ToHex()] = new end
 	end
 	for _, k in ipairs(THEME_KEYS) do if pal[k] then Theme[k] = pal[k] end end
 	for _, w in ipairs(Library._windows) do recolor(w.Gui, map) end
@@ -2251,10 +2190,6 @@ function Library:AddAutoTabs(win)
 	tabS:AddToggle({
 		Name = "Watermark", Description = "Ник и FPS сверху справа", Flag = "_watermark",
 		Callback = function(v) Library:SetWatermark(win, v) end,
-	})
-	tabS:AddToggle({
-		Name = "Плавные анимации", Description = "Выключи на слабом телефоне", Default = Library.Animations, Flag = "_anim",
-		Callback = function(v) Library.Animations = v end,
 	})
 	tabS:AddToggle({
 		Name = "Эффект касания", Flag = "_clickfx",
