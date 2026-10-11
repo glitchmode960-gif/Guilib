@@ -1,5 +1,5 @@
 --!nonstrict
--- GuiLib v10.0 — Fluent Glass: звуки, анимации, профили конфигов, геометрия окна, горячие клавиши, тултипы
+-- GuiLib v12.0 — Fluent Glass (+ секции, поиск в списках, память оформления, экспорт конфига): звуки, анимации, профили конфигов, геометрия и размер окна, горячие клавиши, тултипы
 --
 -- Исправлено:  темы/CloseAll через реестр окон, ClickFx, LoadConfig с колбэками,
 --              тип уведомления "warn", ColorPicker на телефоне (скролл + GuiInset),
@@ -23,7 +23,9 @@ local LP = Players.LocalPlayer
 local Library = {}
 local Window = {}; Window.__index = Window
 local Tab = {}; Tab.__index = Tab
-Library.Version = "10.2"
+Library.Version = "12.0"
+Library._themeName = "Fluent"
+Library.Animations = true -- false: все анимации мгновенные (для слабых устройств)
 Library.Brand = "GuiLib"
 Library._windows = {}
 
@@ -70,6 +72,10 @@ local function pad(t, b, l, r)
 end
 
 local function tween(o, t, p, s, d)
+	if Library.Animations == false then
+		for k, v in pairs(p) do pcall(function() o[k] = v end) end
+		return { Cancel = function() end, Play = function() end }
+	end
 	local tw = TweenService:Create(o, TweenInfo.new(t, s or Enum.EasingStyle.Quad, d or Enum.EasingDirection.Out), p)
 	tw:Play(); return tw
 end
@@ -110,6 +116,10 @@ local function label(pa, tx, sz, po, ts)
 		TextColor3 = Theme.Text, Font = Enum.Font.Gotham, TextSize = math.max(10, (ts or 15) - 2),
 		TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = pa,
 	})
+end
+
+local function hex(c)
+	return string.format("%02X%02X%02X", math.floor(c.R * 255 + 0.5), math.floor(c.G * 255 + 0.5), math.floor(c.B * 255 + 0.5))
 end
 
 local function firstChar(s)
@@ -175,8 +185,8 @@ function Library:PlaySound(name)
 	s:Play()
 end
 
-function Library:SetSoundsEnabled(on) Library.SoundEnabled = on and true or false end
-function Library:SetSoundVolume(v) Library.SoundVolume = math.clamp(tonumber(v) or 0.5, 0, 1) end
+function Library:SetSoundsEnabled(on) Library.SoundEnabled = on and true or false; Library:_prefsChanged() end
+function Library:SetSoundVolume(v) Library.SoundVolume = math.clamp(tonumber(v) or 0.5, 0, 1); Library:_prefsChanged() end
 
 local function preloadSounds()
 	local list = {}
@@ -246,6 +256,7 @@ end
 -- RIPPLE / КЛИК / HOVER
 ----------------------------------------------------------------
 local function ripple(row, input)
+	if Library.Animations == false then return end
 	local x = input.Position.X - row.AbsolutePosition.X
 	local c = create("Frame", {
 		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, x, 0, math.min(row.AbsoluteSize.Y, ROW) / 2),
@@ -380,6 +391,95 @@ end
 ----------------------------------------------------------------
 -- WINDOW
 ----------------------------------------------------------------
+----------------------------------------------------------------
+-- ФОНОВАЯ КАРТИНКА (под стеклом)
+-- По умолчанию — встроенный арт. CreateWindow({ Background = ... }):
+--   false                  — без картинки
+--   "rbxassetid://ID"/ID   — картинка из Roblox
+--   "https://..."          — ссылка (скачается и закешируется в workspace экзекьютора)
+--   "имя_файла.png"        — файл из workspace экзекьютора
+----------------------------------------------------------------
+Library.Backgrounds = {
+	anime = {
+		file = "GuiLib_bg_anime.png", ratio = 1.0733,
+		data = {
+		"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",
+		},
+	},
+}
+
+local B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+local function b64decode(s)
+	local lk = {}
+	for i = 1, 64 do lk[string.byte(B64, i)] = i - 1 end
+	local out, acc, bits, n = {}, 0, 0, 0
+	for i = 1, #s do
+		local v = lk[string.byte(s, i)]
+		if v then
+			acc = acc * 64 + v
+			bits += 6
+			if bits >= 8 then
+				bits -= 8
+				local p = 2 ^ bits
+				n += 1
+				out[n] = string.char(math.floor(acc / p) % 256)
+				acc = acc % p
+			end
+		end
+	end
+	return table.concat(out)
+end
+
+local function customAsset(path)
+	local gca = getcustomasset or getsynasset
+	if typeof(gca) ~= "function" then return nil end
+	local ok, res = pcall(gca, path)
+	return ok and res or nil
+end
+
+-- возвращает (Image, ratio) или nil
+local function resolveBackground(src)
+	if src == false then return nil end
+	if src == nil or src == true or src == "anime" then
+		local e = Library.Backgrounds.anime
+		if typeof(writefile) ~= "function" or typeof(isfile) ~= "function" then return nil end
+		local ok = pcall(function()
+			if not isfile(e.file) then writefile(e.file, b64decode(table.concat(e.data))) end
+		end)
+		if not ok then return nil end
+		local asset = customAsset(e.file)
+		return asset, asset and e.ratio or nil
+	end
+	local s = tostring(src)
+	if s:match("^rbxasset") then return s, nil end
+	if s:match("^%d+$") then return "rbxassetid://" .. s, nil end
+	if s:match("^https?://") then
+		if typeof(writefile) ~= "function" or typeof(isfile) ~= "function" then return nil end
+		local sum = 0
+		for i = 1, #s do sum = (sum * 31 + string.byte(s, i)) % 1000000007 end
+		local file = "GuiLib_bg_url_" .. sum .. ".png"
+		local ok = pcall(function()
+			if not isfile(file) then writefile(file, game:HttpGet(s)) end
+		end)
+		if not ok then return nil end
+		return customAsset(file), nil
+	end
+	if typeof(isfile) == "function" and isfile(s) then return customAsset(s), nil end
+	return nil
+end
+
 local function mkWinIcon(kind, btn)
 	local col = Theme.SubText
 	local function bar(rot)
@@ -428,6 +528,9 @@ function Library:CreateWindow(opts)
 	local function fullSize()
 		local v = cam.ViewportSize
 		if self.Maximized then return Vector2.new(v.X * 0.96, v.Y * 0.9) end
+		if self._customSize then
+			return Vector2.new(math.clamp(self._customSize.X, 340, math.max(340, v.X * 0.98)), math.clamp(self._customSize.Y, 220, math.max(220, v.Y * 0.95)))
+		end
 		return Vector2.new(math.min(640, v.X * 0.94), math.min(440, v.Y * 0.78))
 	end
 	local function sbWidth() return math.clamp(math.floor(cam.ViewportSize.X * 0.24), 90, 150) end
@@ -450,11 +553,23 @@ function Library:CreateWindow(opts)
 	}, { corner(10) })
 	self.Scale = create("UIScale", { Parent = self.Main })
 
-	if opts.Background then -- Background = "rbxassetid://..." (картинка под стеклом)
-		create("ImageLabel", {
-			Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Image = opts.Background,
-			ImageTransparency = opts.BackgroundTransparency or 0.8, ScaleType = Enum.ScaleType.Crop, Parent = self.Main,
-		})
+	do -- картинка под стеклом (по умолчанию встроенный арт)
+		local img, ratio = resolveBackground(opts.Background)
+		if img then
+			local kids
+			if ratio then
+				kids = { create("UIAspectRatioConstraint", {
+					AspectRatio = ratio, AspectType = Enum.AspectType.ScaleWithParentSize, DominantAxis = Enum.DominantAxis.Height,
+				}) }
+			end
+			self.BgImage = create("ImageLabel", {
+				AnchorPoint = Vector2.new(1, 1), Position = ratio and UDim2.new(1, -4, 1, 0) or UDim2.fromScale(1, 1),
+				Size = ratio and UDim2.fromScale(0, 1) or UDim2.fromScale(1, 1), BackgroundTransparency = 1, Image = img,
+				ImageTransparency = opts.BackgroundTransparency or 0.78,
+				ScaleType = ratio and Enum.ScaleType.Fit or Enum.ScaleType.Crop, Parent = self.Main,
+			}, kids)
+			self.BgImage:SetAttribute("NoTheme", true)
+		end
 	end
 	self.BorderStroke = create("UIStroke", { Color = Theme.Stroke, Thickness = 2, Transparency = 0.4 })
 	create("Frame", { -- рамка окна
@@ -477,6 +592,7 @@ function Library:CreateWindow(opts)
 	})
 	local tl = label(th, title, UDim2.fromOffset(0, 20), nil, 15)
 	tl.AutomaticSize = Enum.AutomaticSize.X; tl.TextTruncate = Enum.TextTruncate.None; tl.Font = Enum.Font.GothamMedium
+	self.TitleLabel = tl
 	if opts.Subtitle then
 		local sl = label(th, opts.Subtitle, UDim2.fromOffset(0, 20), nil, 12)
 		sl.AutomaticSize = Enum.AutomaticSize.X; sl.TextTruncate = Enum.TextTruncate.None; sl.TextColor3 = Theme.SubText
@@ -616,6 +732,48 @@ function Library:CreateWindow(opts)
 		self.Pages.Position = UDim2.fromOffset(w, 0)
 	end)
 
+	-- ручка изменения размера окна (правый нижний угол)
+	local grip = create("TextButton", {
+		Size = UDim2.fromOffset(26, 26), AnchorPoint = Vector2.new(1, 1), Position = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1, Text = "", AutoButtonColor = false, ZIndex = 30, Parent = self.Main,
+	})
+	for _, ln in ipairs({ { 18, 15 }, { 8, 19 } }) do
+		create("Frame", {
+			Size = UDim2.fromOffset(ln[1], 2), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(ln[2], ln[2]),
+			Rotation = -45, BackgroundColor3 = Theme.SubText, BackgroundTransparency = 0.3, BorderSizePixel = 0, Parent = grip,
+		})
+	end
+	local rz
+	grip.InputBegan:Connect(function(i)
+		if not isPointer(i) or self.Maximized or self.Minimized or self._locked then return end
+		rz = { start = i.Position, size = self._size, pos = self.Main.Position }
+	end)
+	self:_connect(UIS.InputChanged, function(i)
+		if not rz or not isMove(i) then return end
+		local d, sc, v = i.Position - rz.start, self.UserScale, cam.ViewportSize
+		local w = math.clamp(rz.size.X + d.X / sc, 340, math.max(340, v.X * 0.98 / sc))
+		local h = math.clamp(rz.size.Y + d.Y / sc, 220, math.max(220, v.Y * 0.95 / sc))
+		self._size = Vector2.new(w, h)
+		self._customSize = self._size
+		self.Main.Size = UDim2.fromOffset(w, h)
+		-- левый верхний угол остаётся на месте
+		self.Main.Position = UDim2.new(rz.pos.X.Scale, rz.pos.X.Offset + (w - rz.size.X) * sc / 2, rz.pos.Y.Scale, rz.pos.Y.Offset + (h - rz.size.Y) * sc / 2)
+	end)
+	self:_connect(UIS.InputEnded, function(i)
+		if rz and isPointer(i) then rz = nil; self:_queueGeo() end
+	end)
+
+	-- прокрутка активной вкладки кнопками ▲ ▼ (одно соединение на окно)
+	self._scrollDir = 0
+	self:_connect(RunService.Heartbeat, function(dt)
+		local tb = self._current
+		if self._scrollDir ~= 0 and tb and tb.Container.Visible then
+			local pg = tb.Page
+			local maxY = math.max(0, pg.AbsoluteCanvasSize.Y - pg.AbsoluteWindowSize.Y)
+			pg.CanvasPosition = Vector2.new(0, math.clamp(pg.CanvasPosition.Y + self._scrollDir * dt * 520, 0, maxY))
+		end
+	end)
+
 	self:LoadGeometry()
 	preloadSounds()
 
@@ -639,6 +797,8 @@ function Window:SaveGeometry()
 	local data = {
 		fx = c.X / v.X, fy = c.Y / v.Y, scale = self.UserScale, maximized = self.Maximized,
 		fabx = f.AbsolutePosition.X / v.X, faby = f.AbsolutePosition.Y / v.Y,
+		w = self._customSize and self._customSize.X or nil, h = self._customSize and self._customSize.Y or nil,
+		prefs = Library:_getPrefs(),
 	}
 	return (pcall(function() writefile(self._geoFile, HttpService:JSONEncode(data)) end))
 end
@@ -649,6 +809,11 @@ function Window:LoadGeometry()
 	local ok, d = pcall(function() return HttpService:JSONDecode(readfile(self._geoFile)) end)
 	if not ok or type(d) ~= "table" then return false end
 	if type(d.scale) == "number" then self.UserScale = math.clamp(d.scale, 0.6, 1.4) end
+	if type(d.w) == "number" and type(d.h) == "number" then
+		self._customSize = Vector2.new(d.w, d.h)
+		self._size = self._fullSize()
+		self.Main.Size = UDim2.fromOffset(self._size.X, self._size.Y)
+	end
 	if d.maximized == true then
 		self.Maximized = true
 		self._size = self._fullSize()
@@ -660,6 +825,8 @@ function Window:LoadGeometry()
 	if type(d.fabx) == "number" and type(d.faby) == "number" then
 		self.Fab.Position = UDim2.fromScale(math.clamp(d.fabx, 0, 0.95), math.clamp(d.faby, 0, 0.92))
 	end
+	Library:_applyPrefs(d.prefs)
+	self.Main.BackgroundTransparency = Theme.GlassAlpha
 	return true
 end
 
@@ -680,7 +847,7 @@ function Window:SetScale(v)
 end
 
 function Window:ResetGeometry()
-	self.Maximized = false; self.Minimized = false; self.UserScale = 1
+	self.Maximized = false; self.Minimized = false; self.UserScale = 1; self._customSize = nil
 	self._size = self._fullSize()
 	tween(self.Main, 0.3, {
 		Size = UDim2.fromOffset(self._size.X, self._size.Y), Position = UDim2.fromScale(0.5, 0.5),
@@ -772,6 +939,12 @@ function Window:SetMinimized(v)
 	self.Minimized = v
 	tween(self.Main, 0.25, { Size = UDim2.fromOffset(self._size.X, v and 40 or self._size.Y) }, Enum.EasingStyle.Quint)
 end
+
+function Window:SetTitle(text)
+	if self.TitleLabel then self.TitleLabel.Text = tostring(text) end
+end
+
+function Window:Toggle() self:SetOpen(not self.Open) end
 
 function Window:Destroy()
 	pcall(function() self:SaveGeometry() end)
@@ -914,7 +1087,6 @@ function Window:CreateTab(name, icon)
 	})
 
 	-- кнопки прокрутки в строке заголовка: удерживай ▲ / ▼
-	local dirHeld = 0
 	local function scrollBtn(text, x, dir)
 		local b = create("TextButton", {
 			Size = UDim2.fromOffset(30, 26), Position = UDim2.new(1, x, 0, 4), BackgroundColor3 = Theme.Element,
@@ -922,12 +1094,12 @@ function Window:CreateTab(name, icon)
 			Font = Enum.Font.GothamBold, TextSize = 12, AutoButtonColor = false, Parent = container,
 		}, { corner(8), stroke() })
 		local function release()
-			if dirHeld == dir then dirHeld = 0 end
+			if self._scrollDir == dir then self._scrollDir = 0 end
 			tween(b, 0.15, { BackgroundColor3 = Theme.Element, TextColor3 = Theme.SubText })
 		end
 		b.InputBegan:Connect(function(i)
 			if isPointer(i) then
-				dirHeld = dir
+				self._scrollDir = dir
 				tween(b, 0.1, { BackgroundColor3 = Theme.Hover, TextColor3 = Theme.Accent })
 			end
 		end)
@@ -936,15 +1108,9 @@ function Window:CreateTab(name, icon)
 	end
 	scrollBtn("▲", -72, -1)
 	scrollBtn("▼", -38, 1)
-	self:_connect(RunService.Heartbeat, function(dt)
-		if dirHeld ~= 0 and container.Visible then
-			local maxY = math.max(0, page.AbsoluteCanvasSize.Y - page.AbsoluteWindowSize.Y)
-			page.CanvasPosition = Vector2.new(0, math.clamp(page.CanvasPosition.Y + dirHeld * dt * 520, 0, maxY))
-		end
-	end)
 
 	local tab = setmetatable({
-		Window = self, Page = page, Container = container, Button = button, Indicator = indicator,
+		Window = self, Page = page, Scroller = page, Container = container, Button = button, Indicator = indicator,
 		IconObj = iconObj, IconScale = iconScale, Name = name,
 	}, Tab)
 	table.insert(self._tabs, tab)
@@ -1210,6 +1376,8 @@ function Tab:AddSectionInfo(title, subtitle)
 end
 
 function Tab:AddLabel(text)
+	local rich = false
+	if type(text) == "table" then rich = text.RichText == true; text = text.Text end
 	local row = create("Frame", {
 		Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
 		BackgroundColor3 = Theme.Element, BackgroundTransparency = Theme.RowAlpha, BorderSizePixel = 0, Parent = self.Page,
@@ -1217,6 +1385,7 @@ function Tab:AddLabel(text)
 	local l = label(row, text, UDim2.new(1, 0, 0, 0))
 	l.AutomaticSize = Enum.AutomaticSize.Y; l.TextWrapped = true
 	l.TextTruncate = Enum.TextTruncate.None; l.TextColor3 = Theme.SubText
+	l.RichText = rich
 	return { Set = function(_, v) l.Text = v end }
 end
 
@@ -1345,6 +1514,7 @@ end
 
 function Tab:AddSlider(o)
 	local win, page = self.Window, self.Page
+	local scroller = self.Scroller or self.Page
 	local min, max, inc = o.Min or 0, o.Max or 100, o.Increment or 1
 	local value = o.Default or min
 	local dec = #((tostring(inc):match("%.(%d+)")) or "")
@@ -1390,11 +1560,12 @@ function Tab:AddSlider(o)
 	-- тач: сначала определяем намерение. Горизонталь — двигаем слайдер, вертикаль — прокручиваем страницу
 	local drag, pending, startPos = false, false, nil
 	hit.InputBegan:Connect(function(i)
+		if i.UserInputType == Enum.UserInputType.MouseButton2 then set(o.Default or min, false, true); return end
 		if not isPointer(i) then return end
 		if i.UserInputType == Enum.UserInputType.Touch then
 			pending, startPos = true, i.Position
 		else
-			drag = true; page.ScrollingEnabled = false; fromInput(i)
+			drag = true; scroller.ScrollingEnabled = false; fromInput(i)
 		end
 	end)
 	win:_connect(UIS.InputChanged, function(i)
@@ -1404,7 +1575,7 @@ function Tab:AddSlider(o)
 			if d.Magnitude > 8 then
 				pending = false
 				if math.abs(d.X) >= math.abs(d.Y) then
-					drag = true; page.ScrollingEnabled = false; fromInput(i)
+					drag = true; scroller.ScrollingEnabled = false; fromInput(i)
 				end
 			end
 		elseif drag then
@@ -1414,7 +1585,7 @@ function Tab:AddSlider(o)
 	win:_connect(UIS.InputEnded, function(i)
 		if not isPointer(i) then return end
 		if pending then pending = false; fromInput(i) end -- короткое касание = поставить значение
-		if drag then drag = false; page.ScrollingEnabled = true end
+		if drag then drag = false; scroller.ScrollingEnabled = true end
 	end)
 	function obj:Set(v, s) set(v, s, true) end
 	function obj:Get() return value end
@@ -1436,7 +1607,15 @@ function Tab:AddTextbox(o)
 		ClearTextOnFocus = false, Parent = row,
 	}, { corner(10), create("UIPadding", { PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) }) })
 	local obj = {}
+	box.ClearTextOnFocus = o.ClearOnFocus == true
+	if o.Numeric then -- только цифры, точка и минус
+		box:GetPropertyChangedSignal("Text"):Connect(function()
+			local f = box.Text:gsub("[^%d%.%-]", "")
+			if f ~= box.Text then box.Text = f end
+		end)
+	end
 	box.FocusLost:Connect(function(e)
+		if o.Finished and not e then return end -- Finished = true: только по Enter
 		win:_setFlag(o.Flag, box.Text)
 		safe(o.Callback, box.Text, e)
 	end)
@@ -1467,11 +1646,17 @@ function Tab:AddDropdown(o)
 	local list = create("Frame", {
 		Position = UDim2.fromOffset(0, ROW), Size = UDim2.new(1, 0, 0, 0), BackgroundTransparency = 1, Parent = row,
 	})
-	create("UIListLayout", { Padding = UDim.new(0, 6), HorizontalAlignment = Enum.HorizontalAlignment.Center, Parent = list })
+	create("UIListLayout", {
+		Padding = UDim.new(0, 4), HorizontalAlignment = Enum.HorizontalAlignment.Center,
+		SortOrder = Enum.SortOrder.LayoutOrder, Parent = list,
+	})
 	local obj, buttons = {}, {}
+	local searchBox, shown = nil, 0
+
+	local function bodyHeight() return (searchBox and 32 or 0) + shown * OPT_STEP + 8 end
 	local function setOpen(v)
 		open = v
-		tween(row, 0.2, { Size = UDim2.new(1, 0, 0, v and (ROW + #options * OPT_STEP + 8) or ROW) }, Enum.EasingStyle.Quint)
+		tween(row, 0.2, { Size = UDim2.new(1, 0, 0, v and (ROW + bodyHeight()) or ROW) }, Enum.EasingStyle.Quint)
 		tween(arrow, 0.2, { Rotation = v and 180 or 0 })
 	end
 	local function select(opt, silent)
@@ -1480,19 +1665,47 @@ function Tab:AddDropdown(o)
 		for val, b in pairs(buttons) do tween(b, 0.15, { BackgroundColor3 = val == opt and Theme.Accent or Theme.Hover }) end
 		if not silent then safe(o.Callback, opt) end
 	end
+	-- поиск по пунктам (появляется, если пунктов больше 7)
+	local function applyFilter(q)
+		q = string.lower(q or "")
+		shown = 0
+		for _, opt in ipairs(options) do
+			local b = buttons[opt]
+			if b then
+				local ok = q == "" or string.find(string.lower(tostring(opt)), q, 1, true) ~= nil
+				b.Visible = ok
+				if ok then shown += 1 end
+			end
+		end
+		if open then setOpen(true) end
+	end
 	local function build()
 		for _, b in pairs(buttons) do b:Destroy() end
 		table.clear(buttons)
-		for _, opt in ipairs(options) do
+		if searchBox then searchBox:Destroy(); searchBox = nil end
+		if #options > 7 then
+			searchBox = create("TextBox", {
+				Size = UDim2.new(1, -12, 0, 28), BackgroundColor3 = Theme.Hover, BorderSizePixel = 0, Text = "",
+				PlaceholderText = "Поиск...", PlaceholderColor3 = Theme.SubText, TextColor3 = Theme.Text,
+				Font = Enum.Font.Gotham, TextSize = 13, ClearTextOnFocus = false, LayoutOrder = 0, Parent = list,
+			}, { corner(8), create("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) }) })
+			searchBox:GetPropertyChangedSignal("Text"):Connect(function() applyFilter(searchBox.Text) end)
+		end
+		for idx, opt in ipairs(options) do
 			local b = create("TextButton", {
 				Size = UDim2.new(1, -12, 0, OPT_H), BackgroundColor3 = Theme.Hover, BorderSizePixel = 0,
 				Text = tostring(opt), TextColor3 = Theme.Text, Font = Enum.Font.GothamMedium,
-				TextSize = 14, AutoButtonColor = false, Parent = list,
+				TextSize = 14, AutoButtonColor = false, LayoutOrder = idx, Parent = list,
 			}, { corner(10) })
 			fx(b, nil)
-			b.MouseButton1Click:Connect(function() select(opt); setOpen(false) end)
+			b.MouseButton1Click:Connect(function()
+				select(opt)
+				if searchBox then searchBox.Text = "" end
+				setOpen(false)
+			end)
 			buttons[opt] = b
 		end
+		shown = #options
 	end
 	onClick(header, function() setOpen(not open) end)
 	hk.action = function() -- горячая клавиша: следующий пункт списка
@@ -1694,6 +1907,7 @@ end
 
 function Tab:AddColorPicker(o)
 	local win, page = self.Window, self.Page
+	local scroller = self.Scroller or self.Page
 	local color = o.Default or Theme.Accent
 	local h, s, v = Color3.toHSV(color)
 	local open = false
@@ -1706,7 +1920,7 @@ function Tab:AddColorPicker(o)
 	preview:SetAttribute("NoTheme", true)
 	local header = clickArea(row, ROW, { Tooltip = o.Tooltip })
 	local holder = create("Frame", {
-		Position = UDim2.fromOffset(0, ROW), Size = UDim2.new(1, 0, 0, 128), BackgroundTransparency = 1, Parent = row,
+		Position = UDim2.fromOffset(0, ROW), Size = UDim2.new(1, 0, 0, 158), BackgroundTransparency = 1, Parent = row,
 	})
 	local sv = create("TextButton", {
 		Text = "", AutoButtonColor = false, Size = UDim2.new(1, -24, 0, 90), Position = UDim2.fromOffset(12, 6),
@@ -1748,10 +1962,16 @@ function Tab:AddColorPicker(o)
 		BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Parent = hue,
 	}, { round() })
 	create("UIStroke", { Color = Color3.new(0, 0, 0), Transparency = 0.5, Thickness = 2, Parent = hM })
+	local hexBox = create("TextBox", {
+		Size = UDim2.new(1, -24, 0, 26), Position = UDim2.fromOffset(12, 126), BackgroundColor3 = Theme.Hover,
+		BorderSizePixel = 0, Text = "", PlaceholderText = "#RRGGBB", PlaceholderColor3 = Theme.SubText,
+		TextColor3 = Theme.Text, Font = Enum.Font.GothamMedium, TextSize = 13, ClearTextOnFocus = false, Parent = holder,
+	}, { corner(8) })
 
 	local function apply(silent)
 		color = Color3.fromHSV(h, s, v)
 		preview.BackgroundColor3 = color
+		hexBox.Text = "#" .. hex(color)
 		sv.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
 		marker.Position = UDim2.new(s, 0, 1 - v, 0)
 		hM.Position = UDim2.new(h, 0, 0.5, 0)
@@ -1764,6 +1984,17 @@ function Tab:AddColorPicker(o)
 	end
 	updateHueGradient()
 
+	hexBox.FocusLost:Connect(function()
+		local str = hexBox.Text:gsub("[^%x]", "")
+		if #str == 6 then
+			local c = Color3.fromRGB(tonumber(str:sub(1, 2), 16), tonumber(str:sub(3, 4), 16), tonumber(str:sub(5, 6), 16))
+			h, s, v = Color3.toHSV(c)
+			updateHueGradient(); apply()
+		else
+			hexBox.Text = "#" .. hex(color)
+		end
+	end)
+
 	local dSV, dH = false, false
 	local function hSV(i)
 		local p = screenPos(i)
@@ -1775,7 +2006,7 @@ function Tab:AddColorPicker(o)
 		h = math.clamp((i.Position.X - hue.AbsolutePosition.X) / hue.AbsoluteSize.X, 0, 1)
 		updateHueGradient(); apply()
 	end
-	local function lock(on) page.ScrollingEnabled = not on end
+	local function lock(on) scroller.ScrollingEnabled = not on end
 	sv.InputBegan:Connect(function(i) if isPointer(i) then dSV = true; lock(true); hSV(i) end end)
 	hue.InputBegan:Connect(function(i) if isPointer(i) then dH = true; lock(true); hH(i) end end)
 	win:_connect(UIS.InputChanged, function(i)
@@ -1788,7 +2019,7 @@ function Tab:AddColorPicker(o)
 	end)
 	header.MouseButton1Click:Connect(function()
 		open = not open
-		tween(row, 0.22, { Size = UDim2.new(1, 0, 0, open and (ROW + 132) or ROW) }, Enum.EasingStyle.Quint)
+		tween(row, 0.22, { Size = UDim2.new(1, 0, 0, open and (ROW + 162) or ROW) }, Enum.EasingStyle.Quint)
 	end)
 	local obj = {}
 	function obj:Get() return color end
@@ -1931,24 +2162,24 @@ local function recolor(root, map)
 		if not obj:GetAttribute("NoTheme") then
 			pcall(function()
 				if obj:IsA("GuiObject") then
-					local n = map[obj.BackgroundColor3:ToHex()]; if n then obj.BackgroundColor3 = n end
+					local n = hex(map[obj.BackgroundColor3)]; if n then obj.BackgroundColor3 = n end
 				end
 				if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
-					local n = map[obj.TextColor3:ToHex()]; if n then obj.TextColor3 = n end
+					local n = hex(map[obj.TextColor3)]; if n then obj.TextColor3 = n end
 				end
 				if obj:IsA("ImageLabel") then
-					local n = map[obj.ImageColor3:ToHex()]; if n then obj.ImageColor3 = n end
+					local n = hex(map[obj.ImageColor3)]; if n then obj.ImageColor3 = n end
 				end
 				if obj:IsA("ScrollingFrame") then
-					local n = map[obj.ScrollBarImageColor3:ToHex()]; if n then obj.ScrollBarImageColor3 = n end
+					local n = hex(map[obj.ScrollBarImageColor3)]; if n then obj.ScrollBarImageColor3 = n end
 				end
 				if obj:IsA("UIStroke") then
-					local n = map[obj.Color:ToHex()]; if n then obj.Color = n end
+					local n = hex(map[obj.Color)]; if n then obj.Color = n end
 				end
 				if obj:IsA("UIGradient") then
 					local kps, changed = {}, false
 					for _, kp in ipairs(obj.Color.Keypoints) do
-						local n = map[kp.Value:ToHex()]
+						local n = hex(map[kp.Value)]
 						if n then changed = true end
 						table.insert(kps, ColorSequenceKeypoint.new(kp.Time, n or kp.Value))
 					end
@@ -1964,7 +2195,7 @@ function Library:ApplyPalette(pal)
 	local map = {}
 	for _, k in ipairs(THEME_KEYS) do
 		local new = pal[k]
-		if new and new ~= Theme[k] then map[Theme[k]:ToHex()] = new end
+		if new and new ~= Theme[k] then hex(map[Theme[k])] = new end
 	end
 	for _, k in ipairs(THEME_KEYS) do if pal[k] then Theme[k] = pal[k] end end
 	for _, w in ipairs(Library._windows) do recolor(w.Gui, map) end
@@ -1972,12 +2203,20 @@ end
 
 function Library:SetTheme(name)
 	local pal = THEMES[name]
-	if pal then Library:ApplyPalette(pal) end
+	if pal then
+		Library:ApplyPalette(pal)
+		Library._themeName, Library._accent = name, nil
+		Library:_prefsChanged()
+	end
 end
 
 -- своя тема из одного цвета акцента
 function Library:SetAccent(color)
-	if typeof(color) == "Color3" then Library:ApplyPalette(paletteFrom(color)) end
+	if typeof(color) == "Color3" then
+		Library:ApplyPalette(paletteFrom(color))
+		Library._themeName, Library._accent = nil, color
+		Library:_prefsChanged()
+	end
 end
 
 function Library:GetThemes()
@@ -2101,6 +2340,24 @@ function Window:CreateConfigManager(tab)
 		end)
 	end })
 
+	tab:AddButton({ Name = "Скопировать конфиг", Description = "В буфер обмена — можно поделиться с другом", Callback = function()
+		local s, copy = self:ExportConfig(), setclipboard or toclipboard
+		if s and copy then
+			copy(s)
+			self:Notify({ Title = "Скопировано", Text = "Конфиг в буфере обмена", Type = "success", Duration = 2 })
+		else
+			self:Notify({ Title = "Ошибка", Text = "Буфер обмена недоступен", Type = "error", Duration = 3 })
+		end
+	end })
+	local importBox
+	importBox = tab:AddTextbox({ Name = "Вставить конфиг", Placeholder = "вставь JSON и нажми Enter", Finished = true, Callback = function(text)
+		if text == "" then return end
+		local ok = self:ImportConfig(text)
+		importBox:Set("", true)
+		self:Notify({ Title = ok and "Импорт" or "Ошибка", Type = ok and "success" or "error", Duration = 2.5,
+			Text = ok and "Значения применены" or "Не удалось прочитать конфиг" })
+	end })
+
 	local cur
 	if typeof(isfile) == "function" and typeof(readfile) == "function" and isfile(self._autoFile) then
 		local ok, v = pcall(readfile, self._autoFile)
@@ -2192,6 +2449,10 @@ function Library:AddAutoTabs(win)
 		Callback = function(v) Library:SetWatermark(win, v) end,
 	})
 	tabS:AddToggle({
+		Name = "Плавные анимации", Description = "Выключи на слабом телефоне", Default = Library.Animations, Flag = "_anim",
+		Callback = function(v) Library:SetAnimations(v) end,
+	})
+	tabS:AddToggle({
 		Name = "Эффект касания", Flag = "_clickfx",
 		Callback = function(v) win:SetClickFx({ Enabled = v }) end,
 	})
@@ -2202,7 +2463,7 @@ function Library:AddAutoTabs(win)
 	local tabT = win:CreateTab("Темы", "◐")
 	tabT:AddSection("Тема")
 	tabT:AddDropdown({
-		Name = "Готовая тема", Options = Library:GetThemes(), Default = "Fluent", Flag = "_theme",
+		Name = "Готовая тема", Options = Library:GetThemes(), Default = Library._themeName, Flag = "_theme",
 		Callback = function(n) Library:SetTheme(n) end,
 	})
 	local token = 0
@@ -2219,8 +2480,18 @@ function Library:AddAutoTabs(win)
 		Name = "Прозрачность окна", Min = 0, Max = 80, Default = math.floor(Theme.GlassAlpha * 100), Suffix = "%", Flag = "_glass",
 		Callback = function(v)
 			Theme.GlassAlpha = v / 100
+			Library:_prefsChanged()
 			for _, w in ipairs(Library._windows) do w.Main.BackgroundTransparency = Theme.GlassAlpha end
 		end,
+	})
+	tabT:AddToggle({
+		Name = "Фоновая картинка", Description = win.BgImage and "Арт под стеклом" or "Картинка не загрузилась (нужны writefile и getcustomasset)",
+		Default = win.BgImage ~= nil, Flag = "_bgOn",
+		Callback = function(v) if win.BgImage then win.BgImage.Visible = v end end,
+	})
+	tabT:AddSlider({
+		Name = "Прозрачность картинки", Min = 40, Max = 100, Default = 78, Suffix = "%", Flag = "_bgAlpha",
+		Callback = function(v) if win.BgImage then win.BgImage.ImageTransparency = v / 100 end end,
 	})
 end
 
@@ -2592,5 +2863,144 @@ function Library:AddFeatureTabs(win)
 		restoreFB(); restoreFov(); restoreZoom(); clearESP()
 	end)
 end
+
+----------------------------------------------------------------
+-- Сворачиваемая секция: внутри те же Add* методы
+-- local sec = tab:AddCollapsible("Название", true); sec:AddToggle({...})
+----------------------------------------------------------------
+function Tab:AddCollapsible(name, defaultOpen)
+	local win = self.Window
+	local open = defaultOpen ~= false
+	local wrap = create("Frame", {
+		Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Parent = self.Page,
+	})
+	create("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder, Parent = wrap })
+	local header = newRow(wrap, 34)
+	header.LayoutOrder = 0
+	label(header, name or "Section", UDim2.new(1, -44, 1, 0), UDim2.fromOffset(12, 0), 15).Font = Enum.Font.GothamBold
+	local arrow = create("TextLabel", {
+		Size = UDim2.fromOffset(24, 34), Position = UDim2.new(1, -30, 0, 0), BackgroundTransparency = 1,
+		Text = "▾", TextColor3 = Theme.Accent, Font = Enum.Font.GothamBold, TextSize = 14,
+		Rotation = open and 0 or -90, Parent = header,
+	})
+	local body = create("Frame", {
+		Size = UDim2.new(1, 0, 0, 0), AutomaticSize = open and Enum.AutomaticSize.Y or Enum.AutomaticSize.None,
+		BackgroundTransparency = 1, ClipsDescendants = true, LayoutOrder = 1, Parent = wrap,
+	})
+	local lay = create("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder, Parent = body })
+	create("UIPadding", { PaddingLeft = UDim.new(0, 8), Parent = body })
+	local sec = setmetatable({ Window = win, Page = body, Scroller = self.Scroller or self.Page, Name = name }, Tab)
+	local token = 0
+	local function unscale(px) return px / math.max(0.1, win.Scale.Scale) end
+	function sec:SetOpen(v)
+		if v == open then return end
+		open = v
+		token += 1
+		local my = token
+		tween(arrow, 0.2, { Rotation = v and 0 or -90 })
+		body.AutomaticSize = Enum.AutomaticSize.None
+		if v then
+			tween(body, 0.22, { Size = UDim2.new(1, 0, 0, unscale(lay.AbsoluteContentSize.Y)) }, Enum.EasingStyle.Quint)
+			task.delay(0.26, function()
+				if my == token then body.AutomaticSize = Enum.AutomaticSize.Y; body.Size = UDim2.new(1, 0, 0, 0) end
+			end)
+		else
+			body.Size = UDim2.new(1, 0, 0, unscale(body.AbsoluteSize.Y))
+			tween(body, 0.22, { Size = UDim2.new(1, 0, 0, 0) }, Enum.EasingStyle.Quint)
+		end
+	end
+	function sec:IsOpen() return open end
+	onClick(clickArea(header), function() sec:SetOpen(not open) end)
+	return sec
+end
+
+----------------------------------------------------------------
+-- Общее API любого элемента: obj.Row, :SetVisible(bool), :SetName(текст), :Destroy()
+----------------------------------------------------------------
+do
+	local names = {}
+	for name, fn in pairs(Tab) do
+		if type(fn) == "function" and (name:sub(1, 3) == "Add" or name:sub(1, 6) == "Create") then
+			table.insert(names, name)
+		end
+	end
+	for _, name in ipairs(names) do
+		local fn = Tab[name]
+		Tab[name] = function(self, ...)
+			local page = self.Page
+			local known = {}
+			for _, c in ipairs(page:GetChildren()) do known[c] = true end
+			local obj = fn(self, ...)
+			if type(obj) ~= "table" then return obj end
+			for _, c in ipairs(page:GetChildren()) do
+				if not known[c] and c:IsA("GuiObject") then
+					obj.Row = c
+					function obj:SetVisible(v) c.Visible = v end
+					function obj:SetName(text)
+						local l = c:FindFirstChildWhichIsA("TextLabel", true)
+						if l then l.Text = tostring(text) end
+					end
+					function obj:Destroy() c:Destroy() end
+					break
+				end
+			end
+			return obj
+		end
+	end
+end
+
+----------------------------------------------------------------
+-- Настройки оформления запоминаются между запусками (тема, акцент, стекло, звук, анимации)
+----------------------------------------------------------------
+function Library:_prefsChanged()
+	for _, w in ipairs(Library._windows) do w:_queueGeo() end
+end
+
+function Library:SetAnimations(v)
+	Library.Animations = v and true or false
+	Library:_prefsChanged()
+end
+
+function Library:_getPrefs()
+	local a = Library._accent
+	return {
+		theme = Library._themeName, accent = a and { r = a.R, g = a.G, b = a.B } or nil,
+		glass = Theme.GlassAlpha, sound = Library.SoundEnabled, volume = Library.SoundVolume, anim = Library.Animations,
+	}
+end
+
+function Library:_applyPrefs(p)
+	if type(p) ~= "table" then return end
+	if type(p.sound) == "boolean" then Library.SoundEnabled = p.sound end
+	if type(p.volume) == "number" then Library.SoundVolume = math.clamp(p.volume, 0, 1) end
+	if type(p.anim) == "boolean" then Library.Animations = p.anim end
+	if type(p.glass) == "number" then Theme.GlassAlpha = math.clamp(p.glass, 0, 0.8) end
+	if type(p.theme) == "string" then
+		Library:SetTheme(p.theme)
+	elseif type(p.accent) == "table" and p.accent.r then
+		Library:SetAccent(Color3.new(p.accent.r, p.accent.g, p.accent.b))
+	end
+end
+
+----------------------------------------------------------------
+-- Экспорт / импорт конфига через буфер обмена
+----------------------------------------------------------------
+function Window:ExportConfig()
+	local ok, s = pcall(function() return HttpService:JSONEncode(encodeV(self.Flags)) end)
+	return ok and s or nil
+end
+
+function Window:ImportConfig(json, fire)
+	local ok, data = pcall(function() return HttpService:JSONDecode(json) end)
+	if not ok or type(data) ~= "table" then return false end
+	Library._mute = true
+	for flag, value in pairs(data) do
+		local setter = self._setters[flag]
+		if setter then pcall(setter, decodeV(value), fire == false) end
+	end
+	Library._mute = false
+	return true
+end
+
 
 return Library
