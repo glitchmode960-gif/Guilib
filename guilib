@@ -1,5 +1,5 @@
 --!nonstrict
--- GuiLib v12.0 — Fluent Glass (+ секции, поиск в списках, память оформления, экспорт конфига): звуки, анимации, профили конфигов, геометрия и размер окна, горячие клавиши, тултипы
+-- GuiLib v13.0 — Fluent Glass (+ RU/EN, всплывающие списки, режимы Keybind, быстрые кнопки, блокировка элементов): звуки, анимации, профили конфигов, геометрия и размер окна, горячие клавиши, тултипы
 --
 -- Исправлено:  темы/CloseAll через реестр окон, ClickFx, LoadConfig с колбэками,
 --              тип уведомления "warn", ColorPicker на телефоне (скролл + GuiInset),
@@ -23,7 +23,7 @@ local LP = Players.LocalPlayer
 local Library = {}
 local Window = {}; Window.__index = Window
 local Tab = {}; Tab.__index = Tab
-Library.Version = "12.0"
+Library.Version = "13.0"
 Library._themeName = "Fluent"
 Library.Animations = true -- false: все анимации мгновенные (для слабых устройств)
 Library.Brand = "GuiLib"
@@ -110,9 +110,166 @@ local function mountGui(g)
 	g.Parent = LP:WaitForChild("PlayerGui")
 end
 
+----------------------------------------------------------------
+-- ЯЗЫК (RU / EN): встроенные тексты переводятся автоматически
+-- Library:SetLanguage("en"); Library.T("Настройки") — перевод строки
+----------------------------------------------------------------
+Library.Language = "ru"
+local TR_EN = {
+	["ESP игроков"] = "Player ESP",
+	["writefile недоступен"] = "writefile unavailable",
+	["Автозагрузка профиля"] = "Autoload profile",
+	["Арт под стеклом"] = "Art under the glass",
+	["Бесконечный прыжок"] = "Infinite jump",
+	["Буфер обмена недоступен"] = "Clipboard unavailable",
+	["В буфер обмена — можно поделиться с другом"] = "To clipboard: share it with a friend",
+	["Визуал"] = "Visuals",
+	["Все значения элементов и горячие клавиши"] = "All element values and hotkeys",
+	["Вставить конфиг"] = "Paste config",
+	["Выбери игрока, который сейчас в игре"] = "Pick a player who is in the game",
+	["Выключи на слабом телефоне"] = "Turn off on a weak phone",
+	["Горячая клавиша"] = "Hotkey",
+	["Горячие клавиши"] = "Hotkeys",
+	["Готовая тема"] = "Preset theme",
+	["Готово"] = "Done",
+	["Гравитация"] = "Gravity",
+	["Громкость"] = "Volume",
+	["Движение"] = "Movement",
+	["Загружено"] = "Loaded",
+	["Загрузить профиль"] = "Load profile",
+	["Загрузка..."] = "Loading...",
+	["Закрепить окно"] = "Lock window",
+	["Запретить перетаскивание"] = "Disable dragging",
+	["Звук"] = "Sound",
+	["Звуки интерфейса"] = "UI sounds",
+	["Значение FOV"] = "FOV value",
+	["Значение гравитации"] = "Gravity value",
+	["Значение прыжка"] = "Jump value",
+	["Значение скорости"] = "Speed value",
+	["Значения применены"] = "Values applied",
+	["Игра"] = "Game",
+	["Игрок"] = "Player",
+	["Изменяет JumpPower"] = "Changes JumpPower",
+	["Изменяет WalkSpeed"] = "Changes WalkSpeed",
+	["Имена и дистанция"] = "Names and distance",
+	["Импорт"] = "Import",
+	["Имя профиля"] = "Profile name",
+	["Интерфейс"] = "Interface",
+	["К игроку "] = "To player ",
+	["Камера и свет"] = "Camera and light",
+	["Картинка не загрузилась (нужны writefile и getcustomasset)"] = "Image failed to load (needs writefile and getcustomasset)",
+	["Клавиши (ПК)"] = "Keys (PC)",
+	["Конфиг в буфере обмена"] = "Config is in the clipboard",
+	["Масштаб окна"] = "Window scale",
+	["Нажми клавишу для «"] = "Press a key for «",
+	["» (Esc — убрать)"] = "» (Esc to clear)",
+	["» будет удалён без возможности восстановления."] = "» will be deleted permanently.",
+	["Направление: куда смотрит камера"] = "Direction: where the camera looks",
+	["Настройки"] = "Settings",
+	["Не даёт кикнуть за бездействие"] = "Prevents the idle kick",
+	["Не удалось прочитать конфиг"] = "Could not read the config",
+	["Не удалось удалить (delfile недоступен?)"] = "Could not delete (delfile unavailable?)",
+	["Ник и FPS сверху справа"] = "Name and FPS at the top right",
+	["Обводка окна плавно меняет цвет"] = "The window border smoothly changes color",
+	["Обновить список профилей"] = "Refresh profile list",
+	["Окно"] = "Window",
+	["Окно само применит выбранный профиль при запуске (win:AutoLoad())"] = "Applies the chosen profile on start (win:AutoLoad())",
+	["Отмена"] = "Cancel",
+	["Ошибка"] = "Error",
+	["Перезайти"] = "Rejoin",
+	["Перезайти на сервер"] = "Rejoin server",
+	["Перезайти?"] = "Rejoin?",
+	["Перемещение"] = "Locomotion",
+	["Плавные анимации"] = "Smooth animations",
+	["Подсветка сквозь стены"] = "Highlight through walls",
+	["Подтвердить"] = "Confirm",
+	["Подтверждение"] = "Confirmation",
+	["Позиция скопирована"] = "Position copied",
+	["Поиск..."] = "Search...",
+	["Полёт"] = "Fly",
+	["Привязка убрана"] = "Binding removed",
+	["Прозрачность картинки"] = "Image transparency",
+	["Прозрачность окна"] = "Window transparency",
+	["Профили"] = "Profiles",
+	["Профили конфигов"] = "Config profiles",
+	["Профиль"] = "Profile",
+	["Профиль «"] = "Profile «",
+	["Профиль: "] = "Profile: ",
+	["Проходить сквозь стены"] = "Walk through walls",
+	["Прочее"] = "Misc",
+	["Радужная обводка"] = "Rainbow border",
+	["Размер всего окна; сохраняется между запусками"] = "Whole window size; kept between launches",
+	["Сбросить персонажа"] = "Reset character",
+	["Сбросить позицию и масштаб"] = "Reset position and scale",
+	["Свой FOV"] = "Custom FOV",
+	["Свой цвет акцента"] = "Custom accent color",
+	["Сила прыжка"] = "Jump power",
+	["Скопировано"] = "Copied",
+	["Скопировать конфиг"] = "Copy config",
+	["Скопировать позицию"] = "Copy position",
+	["Скорость"] = "Speed",
+	["Скорость и прыжок"] = "Speed and jump",
+	["Скорость полёта"] = "Fly speed",
+	["Скрывать свою команду"] = "Hide my team",
+	["Сохранено"] = "Saved",
+	["Сохранить профиль"] = "Save profile",
+	["Стандартная в Roblox: 196.2"] = "Roblox default: 196.2",
+	["Стекло"] = "Glass",
+	["Телепорт"] = "Teleport",
+	["Телепорт к игроку"] = "Teleport to player",
+	["Тема"] = "Theme",
+	["Темы"] = "Themes",
+	["Ты выйдешь и зайдёшь на этот же плейс заново."] = "You will leave and rejoin this same place.",
+	["Убирает тьму и туман"] = "Removes darkness and fog",
+	["Увеличить зум камеры"] = "Increase camera zoom",
+	["Удалено"] = "Deleted",
+	["Удалить профиль"] = "Delete profile",
+	["Удалить профиль?"] = "Delete profile?",
+	["Файл не найден"] = "File not found",
+	["Фоновая картинка"] = "Background image",
+	["Цвет ESP"] = "ESP color",
+	["Эффект касания"] = "Touch effect",
+	["вставь JSON и нажми Enter"] = "paste JSON and press Enter",
+	["выбрано"] = "selected",
+	["%d FPS  •  %d мс  •  онлайн %d"] = "%d FPS  •  %d ms  •  online %d",
+	["Список горячих клавиш"] = "Hotkey list",
+	["Показывает привязанные клавиши и их состояние"] = "Shows bound keys and their state",
+	["Быстрые кнопки"] = "Quick buttons",
+	["Плавающие кнопки на экране"] = "Floating on-screen buttons",
+	["Вид"] = "Display",
+	["Заблокировано"] = "Locked",
+}
+local TR_RU = {}
+for k, v in pairs(TR_EN) do TR_RU[v] = k end
+
+local function T(s)
+	if Library.Language == "en" and type(s) == "string" then return TR_EN[s] or s end
+	return s
+end
+Library.T = T
+
+function Library:SetLanguage(lang)
+	lang = (lang == "en") and "en" or "ru"
+	if Library.Language == lang then return end
+	Library.Language = lang
+	local map = lang == "en" and TR_EN or TR_RU
+	for _, w in ipairs(Library._windows) do
+		for _, obj in ipairs(w.Gui:GetDescendants()) do
+			if obj:IsA("TextLabel") or obj:IsA("TextButton") then
+				local n = map[obj.Text]
+				if n then obj.Text = n end
+			elseif obj:IsA("TextBox") then
+				local n = map[obj.PlaceholderText]
+				if n then obj.PlaceholderText = n end
+			end
+		end
+	end
+	Library:_prefsChanged()
+end
+
 local function label(pa, tx, sz, po, ts)
 	return create("TextLabel", {
-		Size = sz, Position = po, BackgroundTransparency = 1, Text = tx or "",
+		Size = sz, Position = po, BackgroundTransparency = 1, Text = T(tx or ""),
 		TextColor3 = Theme.Text, Font = Enum.Font.Gotham, TextSize = math.max(10, (ts or 15) - 2),
 		TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = pa,
 	})
@@ -222,7 +379,7 @@ local function showTip(gui, text, fixedPos)
 	}, { corner(6), stroke(), pad(6, 6, 10, 10), create("UISizeConstraint", { MaxSize = Vector2.new(280, 400) }) })
 	create("TextLabel", {
 		Size = UDim2.fromOffset(0, 0), AutomaticSize = Enum.AutomaticSize.XY, BackgroundTransparency = 1,
-		Text = text, TextColor3 = Theme.Text, Font = Enum.Font.Gotham, TextSize = 12, TextWrapped = true,
+		Text = T(text), TextColor3 = Theme.Text, Font = Enum.Font.Gotham, TextSize = 12, TextWrapped = true,
 		TextXAlignment = Enum.TextXAlignment.Left, Parent = f,
 	})
 	local function place()
@@ -373,6 +530,96 @@ local function snapNumber(st, v, fn)
 	fn(v)
 end
 
+----------------------------------------------------------------
+-- ОБЩИЙ ВСПЛЫВАЮЩИЙ СПИСОК (для Dropdown и MultiDropdown):
+-- поиск (если пунктов > 7), прокрутка, закрытие кликом мимо
+----------------------------------------------------------------
+local activePopup
+
+local function closePopup()
+	if activePopup then
+		local p = activePopup
+		activePopup = nil
+		tween(p.card, 0.12, { GroupTransparency = 1 })
+		task.delay(0.13, function() p.overlay:Destroy() end)
+		if p.onClose then p.onClose() end
+	end
+end
+
+-- cfg: options, isSelected(opt) -> bool, onPick(opt), multi, onClose()
+local function openPopup(win, anchor, cfg)
+	closePopup()
+	local sc = win.Scale.Scale
+	local opts = cfg.options
+	local searchable = #opts > 7
+	local contentH = (searchable and 34 or 0) + #opts * (OPT_H + 4) + 12
+	local maxH = math.min(contentH, 250)
+	local ap, as = anchor.AbsolutePosition, anchor.AbsoluteSize
+	local v = workspace.CurrentCamera.ViewportSize
+	local below = ap.Y + as.Y + 4
+	local y = (below + maxH * sc <= v.Y - 6) and below or math.max(6, ap.Y - maxH * sc - 4)
+	local x = math.clamp(ap.X, 6, math.max(6, v.X - as.X - 6))
+
+	local overlay = create("TextButton", {
+		Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", AutoButtonColor = false,
+		ZIndex = 60, Parent = win.Gui,
+	})
+	overlay.MouseButton1Click:Connect(closePopup)
+	local card = create("CanvasGroup", {
+		Size = UDim2.fromOffset(as.X / sc, maxH), Position = UDim2.fromOffset(x, y), Active = true,
+		BackgroundColor3 = Theme.Topbar, BorderSizePixel = 0, GroupTransparency = 1, ZIndex = 61, Parent = overlay,
+	}, { corner(10), stroke(), create("UIScale", { Scale = sc }) })
+
+	local buttons = {}
+	local function refreshColors()
+		for opt, b in pairs(buttons) do b.BackgroundColor3 = cfg.isSelected(opt) and Theme.Accent or Theme.Hover end
+	end
+	local function applyFilter(q)
+		q = string.lower(q or "")
+		for opt, b in pairs(buttons) do
+			b.Visible = q == "" or string.find(string.lower(tostring(opt)), q, 1, true) ~= nil
+		end
+	end
+
+	local list = create("ScrollingFrame", {
+		Size = UDim2.new(1, 0, 1, searchable and -36 or 0), Position = UDim2.fromOffset(0, searchable and 36 or 0),
+		BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 3, ScrollBarImageColor3 = Theme.Accent,
+		ScrollingDirection = Enum.ScrollingDirection.Y, CanvasSize = UDim2.new(),
+		AutomaticCanvasSize = Enum.AutomaticSize.Y, Parent = card,
+	})
+	create("UIListLayout", { Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder, Parent = list })
+	create("UIPadding", {
+		PaddingTop = UDim.new(0, 4), PaddingBottom = UDim.new(0, 8), PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6),
+		Parent = list,
+	})
+	if searchable then
+		local box = create("TextBox", {
+			Size = UDim2.new(1, -12, 0, 28), Position = UDim2.fromOffset(6, 5), BackgroundColor3 = Theme.Hover,
+			BorderSizePixel = 0, Text = "", PlaceholderText = T("Поиск..."), PlaceholderColor3 = Theme.SubText,
+			TextColor3 = Theme.Text, Font = Enum.Font.Gotham, TextSize = 13, ClearTextOnFocus = false, Parent = card,
+		}, { corner(8), create("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) }) })
+		box:GetPropertyChangedSignal("Text"):Connect(function() applyFilter(box.Text) end)
+	end
+	for idx, opt in ipairs(opts) do
+		local b = create("TextButton", {
+			Size = UDim2.new(1, 0, 0, OPT_H), BackgroundColor3 = Theme.Hover, BorderSizePixel = 0,
+			Text = tostring(opt), TextColor3 = Theme.Text, Font = Enum.Font.GothamMedium, TextSize = 14,
+			AutoButtonColor = false, LayoutOrder = idx, Parent = list,
+		}, { corner(8) })
+		fx(b, nil)
+		b.MouseButton1Click:Connect(function()
+			cfg.onPick(opt)
+			refreshColors()
+			if not cfg.multi then closePopup() end
+		end)
+		buttons[opt] = b
+	end
+	refreshColors()
+	tween(card, 0.15, { GroupTransparency = 0 })
+	activePopup = { overlay = overlay, card = card, onClose = cfg.onClose }
+end
+
+
 local function encodeV(v)
 	if typeof(v) == "Color3" then return { __t = "Color3", r = v.R, g = v.G, b = v.B } end
 	if typeof(v) == "EnumItem" then return { __t = "Enum", name = v.Name } end
@@ -495,6 +742,11 @@ local function mkWinIcon(kind, btn)
 			Size = UDim2.fromOffset(11, 11), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
 			BackgroundTransparency = 1, BorderSizePixel = 0, Parent = btn,
 		}, { create("UIStroke", { Color = col, Thickness = 1.5 }) })
+	elseif kind == "gear" then
+		create("TextLabel", {
+			Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "⚙", TextColor3 = col,
+			Font = Enum.Font.GothamBold, TextSize = 16, Parent = btn,
+		})
 	else
 		bar(45); bar(-45)
 	end
@@ -503,7 +755,8 @@ end
 local function tint(btn, c)
 	for _, d in ipairs(btn:GetDescendants()) do
 		if d:IsA("UIStroke") then d.Color = c
-		elseif d:IsA("Frame") and d.BackgroundTransparency < 1 then d.BackgroundColor3 = c end
+		elseif d:IsA("Frame") and d.BackgroundTransparency < 1 then d.BackgroundColor3 = c
+		elseif d:IsA("TextLabel") then d.TextColor3 = c end
 	end
 end
 
@@ -518,6 +771,11 @@ function Library:CreateWindow(opts)
 	self.AutoSave = opts.AutoSave or false
 	self.ToggleKey = opts.ToggleKey or Enum.KeyCode.RightShift
 	self.SaveGeometryEnabled = opts.SaveGeometry ~= false
+	-- плотность: "compact" | "normal" | "large" (высота строк и пунктов списков)
+	local dens = opts.Density or "normal"
+	if dens == "compact" then ROW, OPT_H, OPT_STEP = 36, 26, 32
+	elseif dens == "large" then ROW, OPT_H, OPT_STEP = 46, 36, 42
+	else ROW, OPT_H, OPT_STEP = 40, 30, 36 end
 
 	local title = opts.Title or "Window"
 	local safeTitle = (tostring(title):gsub("[^%w_]", "_"))
@@ -583,7 +841,7 @@ function Library:CreateWindow(opts)
 		BackgroundTransparency = 0.55, BorderSizePixel = 0, Parent = header,
 	})
 	local th = create("Frame", {
-		Size = UDim2.new(1, -130, 1, 0), Position = UDim2.fromOffset(14, 0),
+		Size = UDim2.new(1, -168, 1, 0), Position = UDim2.fromOffset(14, 0),
 		BackgroundTransparency = 1, ClipsDescendants = true, Parent = header,
 	})
 	create("UIListLayout", {
@@ -611,6 +869,13 @@ function Library:CreateWindow(opts)
 		b.MouseButton1Click:Connect(function() Library:PlaySound("Click"); cb() end)
 	end
 	winBtn("min", -118, function() self:SetMinimized(not self.Minimized) end)
+	winBtn("gear", -156, function() -- настройки в один клик
+		local tb = self._settingsTab or self._tabs[1]
+		if tb then
+			if self.Minimized then self:SetMinimized(false) end
+			self:SelectTab(tb)
+		end
+	end)
 	winBtn("max", -80, function() self:SetMaximized(not self.Maximized) end)
 	winBtn("close", -42, function() Library:PlaySound("Close"); self:Destroy() end, Theme.Error)
 
@@ -718,7 +983,7 @@ function Library:CreateWindow(opts)
 		if processed or i.UserInputType ~= Enum.UserInputType.Keyboard then return end
 		if i.KeyCode == self.ToggleKey then self:SetOpen(not self.Open); return end
 		for _, e in pairs(self._hotkeys) do
-			if e.key and e.key == i.KeyCode and e.action then safe(e.action) end
+			if e.key and e.key == i.KeyCode and e.action and not (e.owner and e.owner:FindFirstChild("GuiLibLock")) then safe(e.action) end
 		end
 	end)
 
@@ -774,7 +1039,10 @@ function Library:CreateWindow(opts)
 		end
 	end)
 
-	self:LoadGeometry()
+	local loaded = self:LoadGeometry()
+	if not loaded and opts.AutoScale ~= false and cam.ViewportSize.Y < 480 then
+		self.UserScale = math.clamp(cam.ViewportSize.Y / 520, 0.72, 1) -- маленький экран: окно чуть меньше
+	end
 	preloadSounds()
 
 	-- анимация появления
@@ -799,6 +1067,7 @@ function Window:SaveGeometry()
 		fabx = f.AbsolutePosition.X / v.X, faby = f.AbsolutePosition.Y / v.Y,
 		w = self._customSize and self._customSize.X or nil, h = self._customSize and self._customSize.Y or nil,
 		prefs = Library:_getPrefs(),
+		quick = self:_quickData(),
 	}
 	return (pcall(function() writefile(self._geoFile, HttpService:JSONEncode(data)) end))
 end
@@ -824,6 +1093,14 @@ function Window:LoadGeometry()
 	end
 	if type(d.fabx) == "number" and type(d.faby) == "number" then
 		self.Fab.Position = UDim2.fromScale(math.clamp(d.fabx, 0, 0.95), math.clamp(d.faby, 0, 0.92))
+	end
+	if type(d.quick) == "table" then
+		self._quickPos = {}
+		for qn, pp in pairs(d.quick) do
+			if type(pp) == "table" and type(pp[1]) == "number" and type(pp[2]) == "number" then
+				self._quickPos[qn] = { math.clamp(pp[1], 0, 0.95), math.clamp(pp[2], 0, 0.92) }
+			end
+		end
 	end
 	Library:_applyPrefs(d.prefs)
 	self.Main.BackgroundTransparency = Theme.GlassAlpha
@@ -928,6 +1205,7 @@ function Window:SetOpen(v)
 		tween(self.Main, 0.22, { GroupTransparency = 0 })
 		tween(self.Scale, 0.3, { Scale = base }, Enum.EasingStyle.Back)
 	else
+		closePopup()
 		Library:PlaySound("Close")
 		tween(self.Main, 0.15, { GroupTransparency = 1 })
 		tween(self.Scale, 0.15, { Scale = base * 0.92 })
@@ -947,6 +1225,7 @@ end
 function Window:Toggle() self:SetOpen(not self.Open) end
 
 function Window:Destroy()
+	closePopup()
 	pcall(function() self:SaveGeometry() end)
 	for _, fn in ipairs(self._cleanups or {}) do pcall(fn) end
 	hideTip()
@@ -1035,7 +1314,7 @@ function Window:CreateTab(name, icon)
 	local padL = icon and 34 or 12
 	local button = create("TextButton", {
 		Size = UDim2.new(1, 0, 0, 32), BackgroundColor3 = Theme.Hover, BackgroundTransparency = 1,
-		BorderSizePixel = 0, Text = name, TextColor3 = Theme.SubText, Font = Enum.Font.GothamMedium,
+		BorderSizePixel = 0, Text = T(name), TextColor3 = Theme.SubText, Font = Enum.Font.GothamMedium,
 		TextSize = 13, TextTruncate = Enum.TextTruncate.AtEnd, TextXAlignment = Enum.TextXAlignment.Left,
 		AutoButtonColor = false, LayoutOrder = self:_nextOrder(), Parent = self._sbList,
 	}, { corner(8), create("UIPadding", { PaddingLeft = UDim.new(0, padL), PaddingRight = UDim.new(0, 6) }) })
@@ -1255,7 +1534,7 @@ function Window:Dialog(cfg)
 		local b = create("TextButton", {
 			Size = UDim2.new(1 / n, -8 * (n - 1) / n, 1, 0),
 			BackgroundColor3 = bc.Primary and Theme.Accent or Theme.Hover, BorderSizePixel = 0,
-			Text = bc.Text or "OK", TextColor3 = bc.Primary and Color3.new(1, 1, 1) or Theme.Text,
+			Text = T(bc.Text or "OK"), TextColor3 = bc.Primary and Color3.new(1, 1, 1) or Theme.Text,
 			Font = Enum.Font.GothamBold, TextSize = 14, AutoButtonColor = false, LayoutOrder = idx, Parent = rowB,
 		}, { corner(8) })
 		fx(b, b)
@@ -1419,7 +1698,7 @@ function Tab:_bindable(o)
 	local id, n = base, 1
 	while win._hotkeys[id] do n += 1; id = base .. "_" .. n end
 	local flag = "_" .. id
-	local entry = { key = o.Hotkey }
+	local entry = { key = o.Hotkey, name = o.Name }
 	win._hotkeys[id] = entry
 
 	local function setKey(k, silent)
@@ -1439,8 +1718,8 @@ function Tab:_bindable(o)
 	win:_register(flag, obj, obj:Get())
 
 	function entry.startBind()
-		local name = tostring(o.Name or "элемент")
-		win:Notify({ Title = "Горячая клавиша", Text = "Нажми клавишу для «" .. name .. "» (Esc — убрать)", Type = "info", Duration = 4 })
+		local name = tostring(entry.name or o.Name or "элемент")
+		win:Notify({ Title = "Горячая клавиша", Text = T("Нажми клавишу для «") .. name .. T("» (Esc — убрать)"), Type = "info", Duration = 4 })
 		local conn
 		conn = UIS.InputBegan:Connect(function(i)
 			if i.UserInputType ~= Enum.UserInputType.Keyboard then return end
@@ -1473,7 +1752,7 @@ function Tab:AddButton(o)
 	local function run() safe(o.Callback) end
 	onClick(btn, run)
 	hk.action = run
-	return row
+	return { Fire = run }
 end
 
 function Tab:AddToggle(o)
@@ -1506,6 +1785,7 @@ function Tab:AddToggle(o)
 	local btn = clickArea(row, nil, { NoClick = true, Tooltip = o.Tooltip, OnHold = hk.startBind })
 	onClick(btn, function() set(not state) end)
 	hk.action = function() set(not state) end
+	hk.getState = function() return state end
 	function obj:Set(v, s) set(v, s) end
 	function obj:Get() return state end
 	set(state, true); win:_register(o.Flag, obj, state)
@@ -1602,7 +1882,7 @@ function Tab:AddTextbox(o)
 	local box = create("TextBox", {
 		Size = UDim2.new(0.6, -20, 0, 28), Position = UDim2.new(0.4, 4, 0.5, -14),
 		BackgroundColor3 = Theme.Hover, BorderSizePixel = 0, Text = o.Default or "",
-		PlaceholderText = o.Placeholder or "", PlaceholderColor3 = Theme.SubText,
+		PlaceholderText = T(o.Placeholder or ""), PlaceholderColor3 = Theme.SubText,
 		TextColor3 = Theme.Text, Font = Enum.Font.Gotham, TextSize = 14,
 		ClearTextOnFocus = false, Parent = row,
 	}, { corner(10), create("UIPadding", { PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) }) })
@@ -1632,82 +1912,35 @@ function Tab:AddDropdown(o)
 	local win = self.Window
 	local options = o.Options or {}
 	local current = o.Default
-	local open = false
+	local isOpen = false
 	local row = newRow(self.Page)
-	label(row, o.Name or "Dropdown", UDim2.new(0.5, -16, 0, ROW), UDim2.fromOffset(16, 0), 15).Font = Enum.Font.GothamMedium
-	local sel = label(row, "", UDim2.new(0.4, -30, 0, ROW), UDim2.new(0.5, 0, 0, 0), 14)
+	label(row, o.Name or "Dropdown", UDim2.new(0.5, -16, 1, 0), UDim2.fromOffset(16, 0), 15).Font = Enum.Font.GothamMedium
+	local sel = label(row, "", UDim2.new(0.4, -30, 1, 0), UDim2.new(0.5, 0, 0, 0), 14)
 	sel.TextXAlignment = Enum.TextXAlignment.Right; sel.TextColor3 = Theme.Accent; sel.Font = Enum.Font.GothamBold
 	local arrow = create("TextLabel", {
 		Size = UDim2.fromOffset(24, ROW), Position = UDim2.new(1, -30, 0, 0), BackgroundTransparency = 1,
 		Text = "▾", TextColor3 = Theme.SubText, Font = Enum.Font.GothamBold, TextSize = 14, Parent = row,
 	})
 	local hk = self:_bindable(o)
-	local header = clickArea(row, ROW, { Tooltip = o.Tooltip, OnHold = hk.startBind })
-	local list = create("Frame", {
-		Position = UDim2.fromOffset(0, ROW), Size = UDim2.new(1, 0, 0, 0), BackgroundTransparency = 1, Parent = row,
-	})
-	create("UIListLayout", {
-		Padding = UDim.new(0, 4), HorizontalAlignment = Enum.HorizontalAlignment.Center,
-		SortOrder = Enum.SortOrder.LayoutOrder, Parent = list,
-	})
-	local obj, buttons = {}, {}
-	local searchBox, shown = nil, 0
-
-	local function bodyHeight() return (searchBox and 32 or 0) + shown * OPT_STEP + 8 end
-	local function setOpen(v)
-		open = v
-		tween(row, 0.2, { Size = UDim2.new(1, 0, 0, v and (ROW + bodyHeight()) or ROW) }, Enum.EasingStyle.Quint)
-		tween(arrow, 0.2, { Rotation = v and 180 or 0 })
-	end
+	local header = clickArea(row, nil, { Tooltip = o.Tooltip, OnHold = hk.startBind })
+	local obj = {}
 	local function select(opt, silent)
-		current = opt; sel.Text = tostring(opt == nil and "-" or opt)
+		current = opt
+		sel.Text = tostring(opt == nil and "-" or opt)
 		win:_setFlag(o.Flag, opt, silent)
-		for val, b in pairs(buttons) do tween(b, 0.15, { BackgroundColor3 = val == opt and Theme.Accent or Theme.Hover }) end
 		if not silent then safe(o.Callback, opt) end
 	end
-	-- поиск по пунктам (появляется, если пунктов больше 7)
-	local function applyFilter(q)
-		q = string.lower(q or "")
-		shown = 0
-		for _, opt in ipairs(options) do
-			local b = buttons[opt]
-			if b then
-				local ok = q == "" or string.find(string.lower(tostring(opt)), q, 1, true) ~= nil
-				b.Visible = ok
-				if ok then shown += 1 end
-			end
-		end
-		if open then setOpen(true) end
+	local function show()
+		isOpen = true
+		tween(arrow, 0.2, { Rotation = 180 })
+		openPopup(win, row, {
+			options = options,
+			isSelected = function(opt) return opt == current end,
+			onPick = function(opt) select(opt) end,
+			onClose = function() isOpen = false; tween(arrow, 0.2, { Rotation = 0 }) end,
+		})
 	end
-	local function build()
-		for _, b in pairs(buttons) do b:Destroy() end
-		table.clear(buttons)
-		if searchBox then searchBox:Destroy(); searchBox = nil end
-		if #options > 7 then
-			searchBox = create("TextBox", {
-				Size = UDim2.new(1, -12, 0, 28), BackgroundColor3 = Theme.Hover, BorderSizePixel = 0, Text = "",
-				PlaceholderText = "Поиск...", PlaceholderColor3 = Theme.SubText, TextColor3 = Theme.Text,
-				Font = Enum.Font.Gotham, TextSize = 13, ClearTextOnFocus = false, LayoutOrder = 0, Parent = list,
-			}, { corner(8), create("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) }) })
-			searchBox:GetPropertyChangedSignal("Text"):Connect(function() applyFilter(searchBox.Text) end)
-		end
-		for idx, opt in ipairs(options) do
-			local b = create("TextButton", {
-				Size = UDim2.new(1, -12, 0, OPT_H), BackgroundColor3 = Theme.Hover, BorderSizePixel = 0,
-				Text = tostring(opt), TextColor3 = Theme.Text, Font = Enum.Font.GothamMedium,
-				TextSize = 14, AutoButtonColor = false, LayoutOrder = idx, Parent = list,
-			}, { corner(10) })
-			fx(b, nil)
-			b.MouseButton1Click:Connect(function()
-				select(opt)
-				if searchBox then searchBox.Text = "" end
-				setOpen(false)
-			end)
-			buttons[opt] = b
-		end
-		shown = #options
-	end
-	onClick(header, function() setOpen(not open) end)
+	onClick(header, function() if isOpen then closePopup() else show() end end)
 	hk.action = function() -- горячая клавиша: следующий пункт списка
 		if #options == 0 then return end
 		local idx = 0
@@ -1716,8 +1949,12 @@ function Tab:AddDropdown(o)
 	end
 	function obj:Get() return current end
 	function obj:Set(v, s) select(v, s) end
-	function obj:Refresh(newOpts) options = newOpts; build(); select(current, true); if open then setOpen(true) end end
-	build(); select(current, true); win:_register(o.Flag, obj, current)
+	function obj:Refresh(newOpts)
+		options = newOpts
+		if isOpen then closePopup() end
+		select(current, true)
+	end
+	select(current, true); win:_register(o.Flag, obj, current)
 	return obj
 end
 
@@ -1726,44 +1963,38 @@ function Tab:AddMultiDropdown(o)
 	local options = o.Options or {}
 	local selected = {}
 	for _, v in ipairs(o.Default or {}) do selected[v] = true end
-	local open = false
+	local isOpen = false
 	local row = newRow(self.Page)
-	label(row, o.Name or "Multi", UDim2.new(0.5, -16, 0, ROW), UDim2.fromOffset(16, 0), 15).Font = Enum.Font.GothamMedium
-	local vl = label(row, "", UDim2.new(0.4, -30, 0, ROW), UDim2.new(0.5, 0, 0, 0), 14)
+	label(row, o.Name or "Multi", UDim2.new(0.5, -16, 1, 0), UDim2.fromOffset(16, 0), 15).Font = Enum.Font.GothamMedium
+	local vl = label(row, "", UDim2.new(0.4, -30, 1, 0), UDim2.new(0.5, 0, 0, 0), 14)
 	vl.TextXAlignment = Enum.TextXAlignment.Right; vl.TextColor3 = Theme.Accent; vl.Font = Enum.Font.GothamBold
-	local header = clickArea(row, ROW, { Tooltip = o.Tooltip })
-	local holder = create("Frame", {
-		Position = UDim2.fromOffset(0, ROW), Size = UDim2.new(1, 0, 0, 0), BackgroundTransparency = 1, Parent = row,
+	local arrow = create("TextLabel", {
+		Size = UDim2.fromOffset(24, ROW), Position = UDim2.new(1, -30, 0, 0), BackgroundTransparency = 1,
+		Text = "▾", TextColor3 = Theme.SubText, Font = Enum.Font.GothamBold, TextSize = 14, Parent = row,
 	})
-	create("UIListLayout", { Padding = UDim.new(0, 6), HorizontalAlignment = Enum.HorizontalAlignment.Center, Parent = holder })
-	local btns = {}
+	local header = clickArea(row, nil, { Tooltip = o.Tooltip })
 	local function getList()
 		local l = {}
 		for _, opt in ipairs(options) do if selected[opt] then table.insert(l, opt) end end
 		return l
 	end
-	local function update()
-		for _, d in pairs(btns) do tween(d.Btn, 0.15, { BackgroundColor3 = selected[d.Name] and Theme.Accent or Theme.Hover }) end
-		vl.Text = #getList() .. " выбрано"
+	local function update() vl.Text = #getList() .. " " .. T("выбрано") end
+	local function show()
+		isOpen = true
+		tween(arrow, 0.2, { Rotation = 180 })
+		openPopup(win, row, {
+			options = options, multi = true,
+			isSelected = function(opt) return selected[opt] == true end,
+			onPick = function(opt)
+				selected[opt] = (not selected[opt]) or nil
+				update()
+				win:_setFlag(o.Flag, getList())
+				safe(o.Callback, getList())
+			end,
+			onClose = function() isOpen = false; tween(arrow, 0.2, { Rotation = 0 }) end,
+		})
 	end
-	for _, opt in ipairs(options) do
-		local b = create("TextButton", {
-			Size = UDim2.new(1, -12, 0, OPT_H), BackgroundColor3 = Theme.Hover, BorderSizePixel = 0,
-			Text = tostring(opt), TextColor3 = Theme.Text, Font = Enum.Font.GothamMedium,
-			TextSize = 14, AutoButtonColor = false, Parent = holder,
-		}, { corner(10) })
-		b.MouseButton1Click:Connect(function()
-			selected[opt] = (not selected[opt]) or nil; update()
-			win:_setFlag(o.Flag, getList())
-			safe(o.Callback, getList())
-		end)
-		fx(b, nil)
-		btns[opt] = { Name = opt, Btn = b }
-	end
-	header.MouseButton1Click:Connect(function()
-		open = not open
-		tween(row, 0.2, { Size = UDim2.new(1, 0, 0, open and (ROW + #options * OPT_STEP + 8) or ROW) }, Enum.EasingStyle.Quint)
-	end)
+	onClick(header, function() if isOpen then closePopup() else show() end end)
 	local obj = {}
 	function obj:Get() return getList() end
 	function obj:Set(list, s)
@@ -1861,20 +2092,48 @@ function Tab:AddStepper(o)
 end
 
 -- Keybind: Callback срабатывает при нажатии клавиши, OnChanged — при смене привязки
+-- Keybind: режимы Press (нажатие), Hold (пока зажата), Toggle (переключатель);
+-- кнопка слева от клавиши переключает режим по кругу.
+-- Callback: Press -> Callback(key); Hold -> Callback(true / false); Toggle -> Callback(состояние)
 function Tab:AddKeybind(o)
 	local win = self.Window
 	local key = o.Default or Enum.KeyCode.RightShift
-	local listening = false
+	local MODES = { "Press", "Hold", "Toggle" }
+	local mode = o.Mode or "Press"
+	local state, listening = false, false
 	local row = newRow(self.Page)
-	label(row, o.Name or "Keybind", UDim2.new(1, -110, 1, 0), UDim2.fromOffset(12, 0), 15).Font = Enum.Font.GothamMedium
+	label(row, o.Name or "Keybind", UDim2.new(1, -196, 1, 0), UDim2.fromOffset(12, 0), 15).Font = Enum.Font.GothamMedium
+	local modeBtn = create("TextButton", {
+		Size = UDim2.fromOffset(64, 28), Position = UDim2.new(1, -170, 0.5, -14), BackgroundColor3 = Theme.Hover,
+		BorderSizePixel = 0, Text = mode, TextColor3 = Theme.SubText, Font = Enum.Font.GothamMedium,
+		TextSize = 12, AutoButtonColor = false, Parent = row,
+	}, { corner(8) })
 	local badge = create("TextButton", {
 		Size = UDim2.fromOffset(88, 28), Position = UDim2.new(1, -100, 0.5, -14), BackgroundColor3 = Theme.Hover,
 		BorderSizePixel = 0, Text = key.Name, TextColor3 = Theme.Accent, Font = Enum.Font.GothamBold,
 		TextSize = 13, AutoButtonColor = false, Parent = row,
-	}, { corner(10) })
+	}, { corner(8) })
+	fx(modeBtn, row); fx(badge, row)
+
+	-- запись в списке горячих клавиш окна (для оверлея; без action — только показывается)
+	local entry = { key = key, name = o.Name, getState = function() if mode == "Press" then return nil end return state end }
+	local base = "kb_" .. tostring(o.Flag or o.Name or "key")
+	local id, n = base, 1
+	while win._hotkeys[id] do n += 1; id = base .. "_" .. n end
+	win._hotkeys[id] = entry
+
 	local obj = {}
-	fx(badge, row)
 	local function refresh() badge.Text = listening and "..." or key.Name end
+	local function setMode(m, silent)
+		mode = m; state = false
+		modeBtn.Text = m
+		if o.Flag then win:_setFlag(o.Flag .. "_mode", m, silent) end
+	end
+	onClick(modeBtn, function()
+		local idx = 1
+		for k, m in ipairs(MODES) do if m == mode then idx = k end end
+		setMode(MODES[idx % #MODES + 1])
+	end)
 	badge.MouseButton1Click:Connect(function()
 		if listening then return end
 		listening = true; refresh()
@@ -1884,6 +2143,7 @@ function Tab:AddKeybind(o)
 			conn:Disconnect()
 			if i.KeyCode ~= Enum.KeyCode.Escape then
 				key = i.KeyCode
+				entry.key = key
 				win:_setFlag(o.Flag, key.Name)
 				safe(o.OnChanged, key)
 			end
@@ -1892,16 +2152,35 @@ function Tab:AddKeybind(o)
 		table.insert(win._conns, conn)
 	end)
 	win:_connect(UIS.InputBegan, function(i, p)
-		if p or listening then return end
-		if i.KeyCode == key then safe(o.Callback, key) end
+		if p or listening or i.UserInputType ~= Enum.UserInputType.Keyboard or i.KeyCode ~= key then return end
+		if mode == "Press" then
+			safe(o.Callback, key)
+		elseif mode == "Hold" then
+			state = true; safe(o.Callback, true)
+		else
+			state = not state; safe(o.Callback, state)
+		end
 	end)
+	win:_connect(UIS.InputEnded, function(i)
+		if mode == "Hold" and state and i.KeyCode == key then state = false; safe(o.Callback, false) end
+	end)
+
 	function obj:Get() return key end
 	function obj:Set(v, s)
 		key = typeof(v) == "string" and (Enum.KeyCode[v] or key) or v
+		entry.key = key
 		refresh(); win:_setFlag(o.Flag, key.Name, s)
 		if not s then safe(o.OnChanged, key) end
 	end
+	function obj:GetMode() return mode end
+	function obj:SetMode(m) for _, x in ipairs(MODES) do if x == m then setMode(m) end end end
+	function obj:GetState() return state end
 	win:_register(o.Flag, obj, key.Name)
+	if o.Flag then
+		win:_register(o.Flag .. "_mode", { Set = function(_, v, s)
+			for _, x in ipairs(MODES) do if x == v then setMode(v, s) end end
+		end }, mode)
+	end
 	return obj
 end
 
@@ -2318,19 +2597,19 @@ function Window:CreateConfigManager(tab)
 		refresh()
 		self:Notify({
 			Title = ok and "Сохранено" or "Ошибка", Type = ok and "success" or "error", Duration = 2.5,
-			Text = ok and ("Профиль: " .. self.ConfigName) or "writefile недоступен",
+			Text = ok and (T("Профиль: ") .. self.ConfigName) or "writefile недоступен",
 		})
 	end })
 	tab:AddButton({ Name = "Загрузить профиль", Callback = function()
 		local ok = self:LoadConfig()
 		self:Notify({
 			Title = ok and "Загружено" or "Ошибка", Type = ok and "success" or "error", Duration = 2.5,
-			Text = ok and ("Профиль: " .. self.ConfigName) or "Файл не найден",
+			Text = ok and (T("Профиль: ") .. self.ConfigName) or "Файл не найден",
 		})
 	end })
 	tab:AddButton({ Name = "Удалить профиль", Callback = function()
 		local name = self.ConfigName
-		self:Confirm("Удалить профиль?", "Профиль «" .. name .. "» будет удалён без возможности восстановления.", function()
+		self:Confirm("Удалить профиль?", T("Профиль «") .. name .. T("» будет удалён без возможности восстановления."), function()
 			local ok = self:DeleteConfig(name)
 			refresh()
 			self:Notify({
@@ -2386,6 +2665,7 @@ Window.AddConfigTab = Window.CreateConfigManager
 function Library:AddAutoTabs(win)
 	-- ===== Настройки =====
 	local tabS = win:CreateTab("Настройки", "⚙")
+	win._settingsTab = tabS
 	tabS:AddSection("Профиль")
 	local card = create("Frame", {
 		Size = UDim2.new(1, 0, 0, 76), BackgroundColor3 = Theme.Element, BackgroundTransparency = Theme.RowAlpha,
@@ -2412,7 +2692,7 @@ function Library:AddAutoTabs(win)
 			local fps = math.floor(1 / RunService.RenderStepped:Wait())
 			local ping = 0
 			pcall(function() ping = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue()) end)
-			live.Text = string.format("%d FPS  •  %d мс  •  онлайн %d", fps, ping, #Players:GetPlayers())
+			live.Text = string.format(T("%d FPS  •  %d мс  •  онлайн %d"), fps, ping, #Players:GetPlayers())
 			task.wait(1)
 		end
 	end)
@@ -2441,6 +2721,21 @@ function Library:AddAutoTabs(win)
 	tabS:AddSlider({
 		Name = "Громкость", Min = 0, Max = 100, Default = math.floor(Library.SoundVolume * 100), Suffix = "%", Flag = "_volume",
 		Callback = function(v) Library:SetSoundVolume(v / 100); Library:PlaySound("Click") end,
+	})
+
+	tabS:AddSection("Вид")
+	tabS:AddDropdown({
+		Name = "Язык / Language", Options = { "Русский", "English" },
+		Default = Library.Language == "en" and "English" or "Русский", Flag = "_lang",
+		Callback = function(v) Library:SetLanguage(v == "English" and "en" or "ru") end,
+	})
+	tabS:AddToggle({
+		Name = "Список горячих клавиш", Description = "Показывает привязанные клавиши и их состояние", Flag = "_kblist",
+		Callback = function(v) win:SetKeybindList(v) end,
+	})
+	tabS:AddToggle({
+		Name = "Быстрые кнопки", Description = "Плавающие кнопки на экране", Default = true, Flag = "_quickvis",
+		Callback = function(v) win:SetQuickButtonsVisible(v) end,
 	})
 
 	tabS:AddSection("Интерфейс")
@@ -2814,7 +3109,7 @@ function Library:AddFeatureTabs(win)
 		local r = getRoot()
 		if r and tr then
 			r.CFrame = tr.CFrame * CFrame.new(0, 0, 3)
-			win:Notify({ Title = "Телепорт", Text = "К игроку " .. tpTarget, Type = "success", Duration = 2 })
+			win:Notify({ Title = "Телепорт", Text = T("К игроку ") .. tpTarget, Type = "success", Duration = 2 })
 		else
 			win:Notify({ Title = "Ошибка", Text = "Выбери игрока, который сейчас в игре", Type = "error", Duration = 3 })
 		end
@@ -2915,7 +3210,9 @@ function Tab:AddCollapsible(name, defaultOpen)
 end
 
 ----------------------------------------------------------------
--- Общее API любого элемента: obj.Row, :SetVisible(bool), :SetName(текст), :Destroy()
+----------------------------------------------------------------
+-- Общее API любого элемента:
+-- obj.Row, :SetVisible(bool), :SetName(текст), :SetLocked(bool), :IsLocked(), :Destroy()
 ----------------------------------------------------------------
 do
 	local names = {}
@@ -2927,20 +3224,48 @@ do
 	for _, name in ipairs(names) do
 		local fn = Tab[name]
 		Tab[name] = function(self, ...)
-			local page = self.Page
-			local known = {}
+			local page, win = self.Page, self.Window
+			local known, hkBefore = {}, {}
 			for _, c in ipairs(page:GetChildren()) do known[c] = true end
+			for id in pairs(win._hotkeys) do hkBefore[id] = true end
 			local obj = fn(self, ...)
 			if type(obj) ~= "table" then return obj end
 			for _, c in ipairs(page:GetChildren()) do
 				if not known[c] and c:IsA("GuiObject") then
 					obj.Row = c
+					-- горячие клавиши, созданные этим элементом, принадлежат его строке
+					for id, e in pairs(win._hotkeys) do
+						if not hkBefore[id] then e.owner = c end
+					end
 					function obj:SetVisible(v) c.Visible = v end
 					function obj:SetName(text)
 						local l = c:FindFirstChildWhichIsA("TextLabel", true)
-						if l then l.Text = tostring(text) end
+						if l then l.Text = T(tostring(text)) end
+						for _, e in pairs(win._hotkeys) do
+							if e.owner == c then e.name = text end
+						end
 					end
-					function obj:Destroy() c:Destroy() end
+					-- блокировка: затемнение поверх строки, которое перехватывает нажатия
+					function obj:SetLocked(v)
+						local lock = c:FindFirstChild("GuiLibLock")
+						if c:FindFirstChildOfClass("UIListLayout") then return end -- в строках со списком внутри оверлей ломает раскладку
+						if v and not lock then
+							create("TextButton", {
+								Name = "GuiLibLock", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0),
+								BackgroundTransparency = 0.5, Text = "🔒", TextColor3 = Theme.SubText, TextSize = 14,
+								Font = Enum.Font.GothamBold, AutoButtonColor = false, ZIndex = 20, Parent = c,
+							}, { corner(6) })
+						elseif not v and lock then
+							lock:Destroy()
+						end
+					end
+					function obj:IsLocked() return c:FindFirstChild("GuiLibLock") ~= nil end
+					function obj:Destroy()
+						for id, e in pairs(win._hotkeys) do
+							if e.owner == c then win._hotkeys[id] = nil end
+						end
+						c:Destroy()
+					end
 					break
 				end
 			end
@@ -2966,6 +3291,7 @@ function Library:_getPrefs()
 	return {
 		theme = Library._themeName, accent = a and { r = a.R, g = a.G, b = a.B } or nil,
 		glass = Theme.GlassAlpha, sound = Library.SoundEnabled, volume = Library.SoundVolume, anim = Library.Animations,
+		lang = Library.Language,
 	}
 end
 
@@ -2974,6 +3300,7 @@ function Library:_applyPrefs(p)
 	if type(p.sound) == "boolean" then Library.SoundEnabled = p.sound end
 	if type(p.volume) == "number" then Library.SoundVolume = math.clamp(p.volume, 0, 1) end
 	if type(p.anim) == "boolean" then Library.Animations = p.anim end
+	if p.lang == "en" or p.lang == "ru" then Library.Language = p.lang end
 	if type(p.glass) == "number" then Theme.GlassAlpha = math.clamp(p.glass, 0, 0.8) end
 	if type(p.theme) == "string" then
 		Library:SetTheme(p.theme)
@@ -3000,6 +3327,138 @@ function Window:ImportConfig(json, fire)
 	end
 	Library._mute = false
 	return true
+end
+
+
+----------------------------------------------------------------
+-- ОВЕРЛЕЙ «ГОРЯЧИЕ КЛАВИШИ»: привязанные клавиши и состояние тумблеров, можно перетаскивать
+----------------------------------------------------------------
+function Window:SetKeybindList(on)
+	if self._kbFrame then self._kbFrame:Destroy(); self._kbFrame = nil end
+	if self._kbConn then self._kbConn:Disconnect(); self._kbConn = nil end
+	if not on then return end
+	local f = create("Frame", {
+		Size = UDim2.fromOffset(190, 0), AutomaticSize = Enum.AutomaticSize.Y, AnchorPoint = Vector2.new(0, 0.5),
+		Position = UDim2.new(0, 12, 0.5, 0), BackgroundColor3 = Theme.Topbar, BackgroundTransparency = 0.12,
+		BorderSizePixel = 0, Parent = self.Gui,
+	}, { corner(8), stroke(), pad(8, 8, 10, 10) })
+	create("UIListLayout", { Padding = UDim.new(0, 3), SortOrder = Enum.SortOrder.LayoutOrder, Parent = f })
+	local head = label(f, "Горячие клавиши", UDim2.new(1, 0, 0, 18), nil, 15)
+	head.Font = Enum.Font.GothamBold; head.LayoutOrder = 0
+	self._kbFrame = f
+	self:_drag(f, f, nil, nil)
+
+	local lines, sig, acc = {}, "", 0
+	self._kbConn = self:_connect(RunService.Heartbeat, function(dt)
+		acc += dt
+		if acc < 0.2 then return end
+		acc = 0
+		local items = {}
+		for _, e in pairs(self._hotkeys) do
+			if e.key then
+				table.insert(items, { name = tostring(e.name or "?"), key = e.key.Name, st = e.getState and e.getState() })
+			end
+		end
+		table.sort(items, function(a, b) return a.name < b.name end)
+		local parts = {}
+		for _, it in ipairs(items) do table.insert(parts, it.name .. "|" .. it.key .. "|" .. tostring(it.st)) end
+		local s = table.concat(parts, ";")
+		if s == sig then return end
+		sig = s
+		for _, l in ipairs(lines) do l:Destroy() end
+		table.clear(lines)
+		for idx, it in ipairs(items) do
+			local st = ""
+			if it.st == true then st = '  <font color="rgb(80,200,120)">ON</font>'
+			elseif it.st == false then st = '  <font color="rgb(150,150,160)">OFF</font>' end
+			local l = label(f, string.format("%s  [%s]%s", it.name, it.key, st), UDim2.new(1, 0, 0, 16), nil, 14)
+			l.RichText = true; l.LayoutOrder = idx
+			table.insert(lines, l)
+		end
+	end)
+end
+
+----------------------------------------------------------------
+-- БЫСТРЫЕ КНОПКИ: плавающие кнопки на экране (перетаскиваются, позиция запоминается)
+-- win:AddQuickButton({ Name = "Полёт", Toggle = flyToggle })      -- связать с тумблером
+-- win:AddQuickButton({ Name = "Тп", Callback = function() end })  -- обычная кнопка
+-- win:AddQuickButton({ Name = "X", Toggle = true, Callback = function(state) end })
+----------------------------------------------------------------
+function Window:AddQuickButton(cfg)
+	cfg = cfg or {}
+	self._quick = self._quick or {}
+	local name = tostring(cfg.Name or ("quick" .. (#self._quick + 1)))
+	local toggleObj = type(cfg.Toggle) == "table" and cfg.Toggle or nil
+	local selfToggle = cfg.Toggle == true
+	local state = cfg.Default == true
+	local saved = self._quickPos and self._quickPos[name]
+	local btn = create("TextButton", {
+		Size = UDim2.fromOffset(46, 46),
+		Position = saved and UDim2.fromScale(saved[1], saved[2]) or UDim2.new(0, 16, 0.55, #self._quick * 54),
+		BackgroundColor3 = Theme.Topbar, BackgroundTransparency = 0.15, Text = cfg.Text or firstChar(name),
+		TextColor3 = Theme.Accent, Font = Enum.Font.GothamBold, TextSize = 18, AutoButtonColor = false, Parent = self.Gui,
+	}, { corner(14), stroke() })
+	attachTip(btn, name)
+	btn.Visible = self._quickVisible ~= false
+
+	local function isOn()
+		if toggleObj and toggleObj.Get then return toggleObj:Get() end
+		return state
+	end
+	local function paint()
+		local on = isOn()
+		tween(btn, 0.15, {
+			BackgroundColor3 = on and Theme.Accent or Theme.Topbar,
+			TextColor3 = on and Color3.new(1, 1, 1) or Theme.Accent,
+		})
+	end
+	local function fire()
+		if toggleObj and toggleObj.Set then
+			toggleObj:Set(not toggleObj:Get())
+		elseif selfToggle then
+			state = not state
+			safe(cfg.Callback, state)
+		else
+			safe(cfg.Callback)
+		end
+		if toggleObj or selfToggle then Library:PlaySound(isOn() and "ToggleOn" or "ToggleOff") else Library:PlaySound("Click") end
+		paint()
+	end
+	self:_drag(btn, btn, fire, function() self:_queueGeo() end)
+	table.insert(self._quick, { name = name, btn = btn, paint = paint })
+	paint()
+
+	if not self._quickConn then -- синхронизация цвета с тумблерами (раз в 0.3 с)
+		local acc = 0
+		self._quickConn = self:_connect(RunService.Heartbeat, function(dt)
+			acc += dt
+			if acc < 0.3 then return end
+			acc = 0
+			for _, q in ipairs(self._quick) do q.paint() end
+		end)
+	end
+	return {
+		Button = btn,
+		SetVisible = function(_, v) btn.Visible = v end,
+		Destroy = function()
+			for i, q in ipairs(self._quick) do if q.btn == btn then table.remove(self._quick, i); break end end
+			btn:Destroy()
+		end,
+	}
+end
+
+function Window:SetQuickButtonsVisible(v)
+	self._quickVisible = v
+	for _, q in ipairs(self._quick or {}) do q.btn.Visible = v end
+end
+
+function Window:_quickData()
+	if not self._quick or #self._quick == 0 then return nil end
+	local v, data = workspace.CurrentCamera.ViewportSize, {}
+	for _, q in ipairs(self._quick) do
+		data[q.name] = { q.btn.AbsolutePosition.X / v.X, q.btn.AbsolutePosition.Y / v.Y }
+	end
+	return data
 end
 
 
